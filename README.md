@@ -1,4 +1,6 @@
 Current Version: **1.9**
+**Major issue currently** in that some exports don't save image data. When you export a JSON, check to make sure the file size
+is what it should be, if you have 50 MiB of images and the export JSON is only 20 KiB, something is wrong and a re-export is likely needed. Not currently known what causes it or what the fix is, will have to figure out. 
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 

@@ -12,11 +12,11 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
 - Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.
-- Adjustable settings to change the workflow to your liking.
+- Adjustable layout and settings to change the workflow to your liking.
 - Lightweight, bloat-free, fully offline and local.
 
 **How to Download**
-1. Download 'index.html' by either clicking it above in the file list and then clicking the download button, or by just clicking the green 'Code' button, downloading the zip, and extracting it.
+1. Download 'index.html' by either clicking it above in the file list and then clicking the download button, or by clicking the green 'Code' button, downloading the zip, and extracting it.
 2. Double-click the html file to run it directly in your web browser.
 3. Have fun!
 
@@ -30,6 +30,8 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 
 If you want to use existing tier list images, there's an easy way to do so.
 In Firefox (or any Firefox fork), pressing Ctrl+I opens page info. While on a page with the images you want, you can go to the Media tab, sort by Type so you can see just 'Image' labeled media next to eachother, select the images you want and download them, then just add them into the tier list maker. Images from tier list sites often all share the same file path, making it easy to Shift+Click just what you want and not any extra stuff like GUI/page elements. **Make sure that while images are downloading, you leave the Page Info menu open,** otherwise it'll stop downloading if there's still more to download.
+
+Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once (can be around ~1000 images at a time where it 'overloads'). A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
 
 
 *Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited and tested by me.*

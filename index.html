@@ -74,12 +74,6 @@
             button:hover {
                 background: #555;
             }
-            .btn-layout-toggle {
-                background: #2b5c8f;
-            }
-            .btn-layout-toggle:hover {
-                background: #3a7bc0;
-            }
 
             /* Tier Board */
             .tier-board {
@@ -201,26 +195,54 @@
             }
 
             /* Layout Mode Variations */
-            .aspect-mode-inactive .tier-item-wrap {
+            .aspect-mode-inactive .tier-item-wrap,
+            .aspect-mode-inactive .drag-placeholder {
                 width: 70px;
                 height: 70px;
                 aspect-ratio: auto;
             }
-            .aspect-mode-inactive .tier-item-img {
+            .aspect-mode-inactive .tier-item-img,
+            .aspect-mode-inactive .drag-placeholder img {
                 width: 70px;
                 height: 70px;
                 object-fit: cover;
             }
 
-            .aspect-mode-active .tier-item-wrap {
+            .aspect-mode-active .tier-item-wrap,
+            .aspect-mode-active .drag-placeholder {
                 height: 70px;
                 width: auto;
                 aspect-ratio: auto;
             }
-            .aspect-mode-active .tier-item-img {
+            .aspect-mode-active .tier-item-img,
+            .aspect-mode-active .drag-placeholder img {
                 height: 70px;
                 width: auto;
                 object-fit: contain;
+            }
+
+            /* Dynamic Native Drag Placeholder Spot Maker */
+            .drag-placeholder {
+                display: inline-block;
+                opacity: 0.6;
+                pointer-events: none;
+                box-sizing: border-box;
+                border: 2px dashed #4af;
+                background: rgba(68, 170, 255, 0.1);
+            }
+            .drag-placeholder img {
+                display: block;
+                opacity: 0.6;
+            }
+            .drag-placeholder.bar-style {
+                width: 4px !important;
+                background: #4af;
+                border: none;
+                opacity: 1;
+                margin: 0 2px;
+            }
+            .drag-placeholder.bar-style img {
+                display: none !important;
             }
 
             /* GLOBAL ZOOM PORTAL PREVIEW */
@@ -247,10 +269,8 @@
 
             #global-zoom-portal .portal-tooltip {
                 position: absolute;
-                /* Position close to the bottom edge of the 2.2x scaled image container */
                 top: 76px;
                 left: 50%;
-                /* Neutralize the parent 2.2x zoom scale layout distortion */
                 transform: translateX(-50%) scale(calc(1 / 2.2));
                 transform-origin: top center;
                 background: rgba(0, 0, 0, 0.95);
@@ -259,12 +279,9 @@
                 border-radius: 5px;
                 font-size: 12px;
                 line-height: 1.4;
-
-                /* Smart fluid scaling: wider boundaries to prevent run-offs */
                 min-width: 140px;
                 max-width: 280px;
                 width: max-content;
-
                 text-align: center;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
                 border: 1px solid #555;
@@ -342,7 +359,6 @@
                 background: #3a7bc0;
             }
 
-            /* FIXED: Rendered at 30% larger dimensions without background crop boxes */
             .modal-img-preview {
                 max-width: 100%;
                 max-height: 260px;
@@ -377,7 +393,6 @@
                 visibility: visible;
                 opacity: 1;
             }
-            /* Standby mode: lighter, cursor pointer, slightly different tint */
             .loading-overlay.standby {
                 visibility: visible;
                 opacity: 1;
@@ -414,6 +429,7 @@
                     transform: rotate(360deg);
                 }
             }
+
             /* Toast notification */
             #toast-notification {
                 position: fixed;
@@ -454,13 +470,7 @@
             <input type="file" id="image-loader" multiple accept="image/*" />
             <button id="add-url-btn">Add Image URL</button>
             <button id="add-tier-btn">Add New Tier</button>
-            <select id="aspect-ratio-select">
-                <option value="square">Force Square (Crop)</option>
-                <option value="aspect">Keep Aspect Ratio</option>
-            </select>
-            <button id="layout-toggle-btn" class="btn-layout-toggle">
-                ↔ Switch to Sidebar Bank
-            </button>
+            <button id="settings-open-btn">⚙ Layout & Settings</button>
             <button id="export-json-btn">Export JSON</button>
             <button id="import-json-btn">Import JSON</button>
             <button id="export-image-btn">Export Image</button>
@@ -508,6 +518,55 @@
             ></div>
         </div>
 
+        <!-- Global Global Settings App Modular Window -->
+        <div id="settings-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 320px">
+                <h3>Application Settings</h3>
+                <label>
+                    Image Aspect Ratio:
+                    <select
+                        id="settings-aspect-ratio"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="square">Force Square (Crop)</option>
+                        <option value="aspect">Keep Aspect Ratio</option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Image Bank Layout:
+                    <select
+                        id="settings-layout-mode"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="bottom">Bottom Workspace Bank</option>
+                        <option value="sidebar">
+                            Right Sidebar Workspace Bank
+                        </option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Drag & Drop Preview:
+                    <select
+                        id="settings-indicator-style"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="preview">
+                            Semi-Transparent Image Preview
+                        </option>
+                        <option value="bar">Blue Bar</option>
+                    </select>
+                </label>
+                <div
+                    class="modal-actions"
+                    style="justify-content: flex-end; margin-top: 15px"
+                >
+                    <button id="settings-close-btn" class="btn-info">
+                        Close Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div id="tier-modal" class="modal-overlay">
             <div class="modal-content">
                 <h3>Tier Settings</h3>
@@ -538,12 +597,16 @@
                         id="export-image-quality"
                         style="width: 100%; margin-top: 5px"
                     >
-                        <option value="1.5" selected>Low (1.5x)</option>
-                        <option value="3">High (3x)</option>
+                        <option value="1.5">Low (1.5x)</option>
+                        <option value="3" selected>High (3x)</option>
+                        <option value="6">Very High (6x)</option>
+                        <option value="12">Extreme (12x)</option>
+                        <option value="24">Insane (24x)</option>
                     </select>
                 </label>
                 <p style="color: #aaa; font-size: 0.85em; margin: 0">
-                    Resolution scales dynamically with the list size.
+                    Resolution scales dynamically with the list size. High scale
+                    factors require significant browser memory allocation.
                 </p>
                 <div class="modal-actions">
                     <button id="export-image-cancel-btn">Cancel</button>
@@ -592,7 +655,11 @@
 
         <script>
             let state = {
-                settings: { aspectRatio: "square", layout: "bottom" },
+                settings: {
+                    aspectRatio: "square",
+                    layout: "bottom",
+                    indicatorStyle: "preview",
+                },
                 title: "Tier List Maker",
                 tiers: [
                     { id: "t1", name: "S", color: "#ff7f7f", images: [] },
@@ -612,37 +679,29 @@
             let activeModalItemWrap = null;
             let hasUnsavedChanges = false;
 
-            // Image registry: maps key -> src string (base64 or blob URL)
-            // blobRegistry: maps key -> File object (for deferred base64 on export)
-            // srcToKey: reverse Map for O(1) dedup instead of O(n) scan
             const imageRegistry = {};
-            const blobRegistry = {}; // key -> File (only for local blob URLs)
+            const blobRegistry = {};
             const srcToKey = new Map();
 
-            // FAST HASH ALGORITHM FOR STABLE KEYS (Replaces counter incrementation)
             function generateStringHash(str) {
                 let hash = 0;
                 if (str.length === 0) return "hash_0";
                 for (let i = 0; i < str.length; i++) {
                     const chr = str.charCodeAt(i);
                     hash = (hash << 5) - hash + chr;
-                    hash |= 0; // Convert to 32bit integer
+                    hash |= 0;
                 }
                 return "img_" + Math.abs(hash);
             }
 
             function registerImage(src, file = null) {
                 if (srcToKey.has(src)) return srcToKey.get(src);
-
-                // If it's a blob URL and we have the file context, hash by filename + size
-                // to maintain identification across sessions. Otherwise hash the string data directly.
                 let key;
                 if (src.startsWith("blob:") && file) {
                     key = generateStringHash(file.name + "_" + file.size);
                 } else {
                     key = generateStringHash(src);
                 }
-
                 imageRegistry[key] = src;
                 srcToKey.set(src, key);
                 if (file) blobRegistry[key] = file;
@@ -663,23 +722,17 @@
                 renderBoard();
                 renderBank();
                 setupEventListeners();
-
-                // Initialize the structural view on boot based directly on tracking state settings
                 applyLayoutMode(state.settings.layout);
-
-                // --- Editable page title ---
                 setupTitleEdit(document.getElementById("page-title"));
             });
 
             function markUnsaved() {
                 hasUnsavedChanges = true;
             }
-
             function clearUnsaved() {
                 hasUnsavedChanges = false;
             }
 
-            // Unsaved change window interception triggers
             window.addEventListener("beforeunload", (e) => {
                 if (hasUnsavedChanges) {
                     e.preventDefault();
@@ -688,7 +741,6 @@
                 }
             });
 
-            // Loading system handlers
             function showLoading(msg) {
                 document.getElementById("loading-text").innerText =
                     msg || "Processing...";
@@ -715,24 +767,19 @@
 
             function applyLayoutMode(mode) {
                 const workspace = document.getElementById("workspace");
-                const toggleBtn = document.getElementById("layout-toggle-btn");
                 if (mode === "sidebar") {
                     state.settings.layout = "sidebar";
                     workspace.classList.add("sidebar-mode");
-                    toggleBtn.innerText = "⬇ Switch to Bottom Bank";
                 } else {
                     state.settings.layout = "bottom";
                     workspace.classList.remove("sidebar-mode");
-                    toggleBtn.innerText = "↔ Switch to Sidebar Bank";
                 }
             }
 
-            // Generates a clean canvas representing the element layout rules
             function createDragGhostCanvas(imgElement) {
                 const imgW = imgElement.naturalWidth || imgElement.width || 70;
                 const imgH =
                     imgElement.naturalHeight || imgElement.height || 70;
-
                 let canvasW = 70;
                 let canvasH = 70;
 
@@ -746,7 +793,6 @@
                 canvas.width = canvasW;
                 canvas.height = canvasH;
                 const ctx = canvas.getContext("2d");
-
                 if (!ctx) return null;
 
                 if (state.settings.aspectRatio === "square") {
@@ -838,12 +884,9 @@
 
                 const scale = parseFloat(quality) || 1;
                 const boardRect = board.getBoundingClientRect();
+                let maxContentRight = 0;
 
-                // --- Find the right edge of the furthest-right image across all rows ---
-                // If no images exist anywhere, fall back to the full board width.
-                let maxContentRight = 0; // relative to boardRect.left
                 rows.forEach((row) => {
-                    // Right edge of the label column (always present, always rendered)
                     const label = row.querySelector(".tier-label");
                     if (label) {
                         const r =
@@ -851,7 +894,6 @@
                             boardRect.left;
                         if (r > maxContentRight) maxContentRight = r;
                     }
-                    // Right edge of the last image in the items area (if any)
                     const imgs = row.querySelectorAll(".tier-item-img");
                     imgs.forEach((img) => {
                         const r =
@@ -860,14 +902,10 @@
                     });
                 });
 
-                // Add a small right-side padding (6px matches the items gap)
                 const PADDING = 6;
                 const contentWidth = Math.round(
                     Math.min(maxContentRight + PADDING, boardRect.width),
                 );
-
-                // --- Determine where the label column starts (skip the handle column) ---
-                // The handle is the first child of a tier-row; we exclude it from the image.
                 let handleWidth = 0;
                 const firstHandle = rows[0].querySelector(".tier-handle");
                 if (firstHandle) {
@@ -876,38 +914,42 @@
                     );
                 }
 
-                // Canvas dimensions: cropped width (no handle), full height, at scale
                 const W = contentWidth - handleWidth;
                 const H = Math.round(boardRect.height);
                 const canvas = document.createElement("canvas");
-                canvas.width = Math.round(W * scale);
-                canvas.height = Math.round(H * scale);
+
+                try {
+                    canvas.width = Math.round(W * scale);
+                    canvas.height = Math.round(H * scale);
+                } catch (e) {
+                    hideLoading();
+                    alert(
+                        "The resolution requested exceeds browser canvas technical limits. Try a lower quality multiplier option.",
+                    );
+                    return;
+                }
+
                 const ctx = canvas.getContext("2d");
                 ctx.scale(scale, scale);
 
-                // Background
                 ctx.fillStyle = "#111";
                 ctx.fillRect(0, 0, W, H);
 
                 const rowPromises = [];
                 rows.forEach((row) => {
                     const rRect = row.getBoundingClientRect();
-                    // x offset is relative to where the label starts (after handle)
                     const originX = boardRect.left + handleWidth;
                     const ry = rRect.top - boardRect.top;
                     const rw = W;
                     const rh = rRect.height;
 
-                    // Row background
                     ctx.fillStyle = "#111";
                     ctx.fillRect(0, ry, rw, rh);
 
-                    // Row border
                     ctx.strokeStyle = "#333";
                     ctx.lineWidth = 1;
                     ctx.strokeRect(0.5, ry + 0.5, rw - 1, rh - 1);
 
-                    // Tier label
                     const label = row.querySelector(".tier-label");
                     if (label) {
                         const lRect = label.getBoundingClientRect();
@@ -916,7 +958,6 @@
                         ctx.fillStyle = label.style.backgroundColor || "#888";
                         ctx.fillRect(lx, ly, lRect.width, lRect.height);
 
-                        // Label text
                         const span = label.querySelector("span");
                         const labelText = span
                             ? span.innerText
@@ -952,7 +993,6 @@
                         });
                     }
 
-                    // Item images
                     const imgs = row.querySelectorAll(".tier-item-img");
                     imgs.forEach((img) => {
                         const iRect = img.getBoundingClientRect();
@@ -971,16 +1011,14 @@
                                         nw > 0 &&
                                         nh > 0
                                     ) {
-                                        // Replicate object-fit: cover — scale so shorter side fills,
-                                        // then center-crop to the destination square
                                         const scaleF = Math.max(
                                             dw / nw,
                                             dh / nh,
                                         );
-                                        const sw = dw / scaleF; // source width to sample
-                                        const sh = dh / scaleF; // source height to sample
-                                        const sx = (nw - sw) / 2; // center crop X
-                                        const sy = (nh - sh) / 2; // center crop Y
+                                        const sw = dw / scaleF;
+                                        const sh = dh / scaleF;
+                                        const sx = (nw - sw) / 2;
+                                        const sy = (nh - sh) / 2;
                                         ctx.drawImage(
                                             img,
                                             sx,
@@ -1003,15 +1041,62 @@
                 });
 
                 Promise.all(rowPromises).then(() => {
-                    const link = document.createElement("a");
-                    link.download = "tier-list.png";
-                    link.href = canvas.toDataURL("image/png");
-                    link.click();
+                    try {
+                        const link = document.createElement("a");
+                        link.download = "tier-list.png";
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+                    } catch (err) {
+                        alert(
+                            "Failed to export image asset string data. The list may contain mixed-origin web URL objects.",
+                        );
+                    }
                     hideLoading();
                 });
             }
 
             function setupEventListeners() {
+                // --- Settings Application Bindings ---
+                document
+                    .getElementById("settings-open-btn")
+                    .addEventListener("click", () => {
+                        document.getElementById("settings-aspect-ratio").value =
+                            state.settings.aspectRatio || "square";
+                        document.getElementById("settings-layout-mode").value =
+                            state.settings.layout || "bottom";
+                        document.getElementById(
+                            "settings-indicator-style",
+                        ).value = state.settings.indicatorStyle || "preview";
+                        document
+                            .getElementById("settings-modal")
+                            .classList.add("active");
+                    });
+
+                document
+                    .getElementById("settings-close-btn")
+                    .addEventListener("click", () => {
+                        const aspectVal = document.getElementById(
+                            "settings-aspect-ratio",
+                        ).value;
+                        const layoutVal = document.getElementById(
+                            "settings-layout-mode",
+                        ).value;
+                        const indicatorVal = document.getElementById(
+                            "settings-indicator-style",
+                        ).value;
+
+                        state.settings.aspectRatio = aspectVal;
+                        state.settings.indicatorStyle = indicatorVal;
+
+                        applyLayoutMode(layoutVal);
+                        updateGlobalAspectClass();
+
+                        document
+                            .getElementById("settings-modal")
+                            .classList.remove("active");
+                        markUnsaved();
+                    });
+
                 document
                     .getElementById("export-image-btn")
                     .addEventListener("click", () => {
@@ -1043,7 +1128,6 @@
                         }, 80);
                     });
 
-                // Image import loading flow
                 const imageLoaderInput =
                     document.getElementById("image-loader");
                 const loadingEl = document.getElementById("loading-indicator");
@@ -1060,7 +1144,6 @@
                     loadingEl.classList.remove("standby");
                 }
 
-                // Click-to-dismiss the standby overlay
                 loadingEl.addEventListener("click", () => {
                     if (loadingEl.classList.contains("standby")) {
                         exitStandby();
@@ -1072,12 +1155,9 @@
                 imageLoaderInput.addEventListener("click", () => {
                     _imageImportExpected = true;
                     showLoading("Waiting for file selection...");
-
                     const onFocus = () => {
                         window.removeEventListener("focus", onFocus);
-                        if (_imageImportExpected) {
-                            enterStandby();
-                        }
+                        if (_imageImportExpected) enterStandby();
                     };
                     window.addEventListener("focus", onFocus);
                     imageLoaderInput._focusCleanup = () =>
@@ -1109,7 +1189,6 @@
                         for (const file of files) {
                             const blobUrl = URL.createObjectURL(file);
                             registerImage(blobUrl, file);
-
                             bank.appendChild(
                                 createImageWrapperElement(blobUrl),
                             );
@@ -1146,9 +1225,7 @@
                                 hideLoading();
                             };
                             tempImg.onerror = () => {
-                                alert(
-                                    "Failed to resolve or parse image asset file data stream from targeted pointer origin path.",
-                                );
+                                alert("Failed to resolve image data asset.");
                                 hideLoading();
                             };
                             tempImg.src = url;
@@ -1170,30 +1247,10 @@
                     });
 
                 document
-                    .getElementById("aspect-ratio-select")
-                    .addEventListener("change", (e) => {
-                        state.settings.aspectRatio = e.target.value;
-                        updateGlobalAspectClass();
-                        markUnsaved();
-                    });
-
-                document
-                    .getElementById("layout-toggle-btn")
-                    .addEventListener("click", () => {
-                        if (state.settings.layout === "bottom") {
-                            applyLayoutMode("sidebar");
-                        } else {
-                            applyLayoutMode("bottom");
-                        }
-                        markUnsaved();
-                    });
-
-                document
                     .getElementById("export-json-btn")
                     .addEventListener("click", async () => {
                         showLoading("Preparing export...");
                         await new Promise((r) => requestAnimationFrame(r));
-
                         syncStateFromDOM();
 
                         const blobKeys = Object.keys(imageRegistry).filter(
@@ -1201,7 +1258,6 @@
                                 imageRegistry[k] &&
                                 imageRegistry[k].startsWith("blob:"),
                         );
-
                         const exportRegistry = { ...imageRegistry };
                         const updatedDescriptions = {};
 
@@ -1216,12 +1272,12 @@
                                 const file = blobRegistry[key];
                                 if (file) {
                                     const base64Data = await new Promise(
-                                        (res, rej) => {
+                                        (res) => {
                                             const reader = new FileReader();
                                             reader.onload = (e) =>
                                                 res(e.target.result);
                                             reader.onerror = () =>
-                                                res(imageRegistry[key]); // fallback
+                                                res(imageRegistry[key]);
                                             reader.readAsDataURL(file);
                                         },
                                     );
@@ -1241,8 +1297,6 @@
                             }
                         }
 
-                        // FIXED: Re-key the descriptions systematically to their permanent base64 data fingerprint
-                        // so that when imported, the text aligns directly with the file data.
                         for (const currentKey in state.descriptions) {
                             const matchingSrc = imageRegistry[currentKey];
                             if (matchingSrc) {
@@ -1328,8 +1382,16 @@
                                             state = parsed;
                                             if (!state.descriptions)
                                                 state.descriptions = {};
+                                            if (!state.settings)
+                                                state.settings = {
+                                                    aspectRatio: "square",
+                                                    layout: "bottom",
+                                                    indicatorStyle: "preview",
+                                                };
+                                            if (!state.settings.indicatorStyle)
+                                                state.settings.indicatorStyle =
+                                                    "preview";
 
-                                            // Restore title if present
                                             const restoredTitle =
                                                 state.title ||
                                                 "Tier List Maker";
@@ -1342,7 +1404,6 @@
                                                     restoredTitle;
                                             document.title = restoredTitle;
 
-                                            // Revoke all existing blob URLs to free memory
                                             for (const k of Object.keys(
                                                 imageRegistry,
                                             )) {
@@ -1353,18 +1414,11 @@
                                                 )
                                                     URL.revokeObjectURL(src);
                                             }
-                                            // Reset all registry structures
                                             for (const k in imageRegistry)
                                                 delete imageRegistry[k];
                                             for (const k in blobRegistry)
                                                 delete blobRegistry[k];
                                             srcToKey.clear();
-
-                                            document.getElementById(
-                                                "aspect-ratio-select",
-                                            ).value =
-                                                state.settings.aspectRatio ||
-                                                "square";
 
                                             applyLayoutMode(
                                                 state.settings.layout ||
@@ -1372,7 +1426,6 @@
                                             );
                                             updateGlobalAspectClass();
 
-                                            // Re-register everything with their clean content keys before drawing
                                             state.tiers.forEach((t) =>
                                                 t.images.forEach((src) =>
                                                     registerImage(src),
@@ -1439,7 +1492,6 @@
                             const descText = document
                                 .getElementById("modal-item-desc")
                                 .value.trim();
-
                             if (descText) {
                                 state.descriptions[key] = descText;
                             } else {
@@ -1477,7 +1529,6 @@
                         }
                     });
 
-                // Open Image in New Tab handler pipeline
                 document
                     .getElementById("modal-item-view-btn")
                     .addEventListener("click", () => {
@@ -1498,9 +1549,7 @@
                                         "View Tier List Asset Element";
                                     newTab.document.close();
                                 } else {
-                                    alert(
-                                        "Popup blocked! Please allow popups for this site to open images natively.",
-                                    );
+                                    alert("Popup blocked!");
                                 }
                             }
                         }
@@ -1511,7 +1560,6 @@
                 activeModalTierId = tierId;
                 const tier = state.tiers.find((t) => t.id === tierId);
                 if (!tier) return;
-
                 document.getElementById("modal-tier-name").value = tier.name;
                 document.getElementById("modal-tier-color").value = tier.color;
                 document.getElementById("tier-modal").classList.add("active");
@@ -1540,27 +1588,21 @@
                 const img = wrapperElement.querySelector(".tier-item-img");
                 const key = wrapperElement.dataset.imgKey;
                 const savedDesc = state.descriptions[key] || "";
-
                 document.getElementById("modal-item-preview").src = img.src;
                 document.getElementById("modal-item-desc").value = savedDesc;
                 document.getElementById("item-modal").classList.add("active");
             }
 
-            /* --- Portal Preview Controller Logic --- */
             function showZoomPortal(imgElement, wrapperElement) {
                 if (SilverDraggedElement) return;
-
                 const portal = document.getElementById("global-zoom-portal");
                 const portalImg = document.getElementById("portal-img");
                 const portalText = document.getElementById("portal-text");
-
                 const rect = imgElement.getBoundingClientRect();
 
                 portalImg.src = imgElement.src;
-
                 portal.style.width = `${rect.width}px`;
                 portal.style.height = `${rect.height}px`;
-
                 portal.style.left = `${rect.left}px`;
                 portal.style.top = `${rect.top}px`;
                 portal.style.display = "block";
@@ -1577,7 +1619,6 @@
                 requestAnimationFrame(() => {
                     portal.style.opacity = "1";
                 });
-
                 imgElement.style.visibility = "hidden";
             }
 
@@ -1585,13 +1626,10 @@
                 const portal = document.getElementById("global-zoom-portal");
                 portal.style.opacity = "0";
                 portal.style.display = "none";
-
                 document.querySelectorAll(".tier-item-img").forEach((img) => {
                     img.style.visibility = "visible";
                 });
             }
-
-            // --- Rendering Logic Engine ---
 
             function renderBoard() {
                 const board = document.getElementById("tier-board");
@@ -1632,7 +1670,6 @@
 
                     const nameDisplay = document.createElement("span");
                     nameDisplay.innerText = tier.name;
-
                     label.appendChild(nameDisplay);
 
                     const itemsContainer = document.createElement("div");
@@ -1682,7 +1719,6 @@
                 wrapper.className = "tier-item-wrap";
                 wrapper.dataset.imgKey = key;
 
-                // FIXED: Support historical string keys if they exist in state or back-match directly
                 if (state.descriptions && !state.descriptions[key]) {
                     for (const oldKey in state.descriptions) {
                         if (
@@ -1738,8 +1774,13 @@
                     setTimeout(() => {
                         _dragPlaceholder = document.createElement("div");
                         _dragPlaceholder.className = "drag-placeholder";
-                        _dragPlaceholder.style.cssText =
-                            "width:0;height:0;overflow:hidden;padding:0;margin:0;border:0;";
+
+                        const placeholderImg = document.createElement("img");
+                        placeholderImg.src = src;
+                        _dragPlaceholder.appendChild(placeholderImg);
+
+                        updatePlaceholderStyle();
+
                         wrapper.parentNode.insertBefore(
                             _dragPlaceholder,
                             wrapper,
@@ -1749,7 +1790,6 @@
                 });
 
                 trigger.addEventListener("dragend", () => {
-                    hideDropIndicator();
                     img.style.opacity = "1";
                     img.style.visibility = "visible";
                     wrapper.style.display = "";
@@ -1771,8 +1811,16 @@
 
                 wrapper.appendChild(trigger);
                 wrapper.appendChild(img);
-
                 return wrapper;
+            }
+
+            function updatePlaceholderStyle() {
+                if (!_dragPlaceholder) return;
+                if (state.settings.indicatorStyle === "bar") {
+                    _dragPlaceholder.classList.add("bar-style");
+                } else {
+                    _dragPlaceholder.classList.remove("bar-style");
+                }
             }
 
             function moveTierOrder(index, direction) {
@@ -1787,49 +1835,16 @@
                 }
             }
 
-            // --- Drag & Drop Tracking Controls ---
             let _dragFramePending = false;
             let _dragPlaceholder = null;
-            let _dropIndicator = null;
-
-            function ensureDropIndicator() {
-                if (!_dropIndicator) {
-                    _dropIndicator = document.createElement("div");
-                    _dropIndicator.id = "drop-indicator";
-                    _dropIndicator.style.cssText = `
-                        position: fixed;
-                        width: 3px;
-                        background: #4af;
-                        border-radius: 2px;
-                        pointer-events: none;
-                        z-index: 9999;
-                        display: none;
-                        box-shadow: 0 0 6px #4af;
-                    `;
-                    document.body.appendChild(_dropIndicator);
-                }
-                return _dropIndicator;
-            }
-
-            function showDropIndicator(x, top, height) {
-                const ind = ensureDropIndicator();
-                ind.style.display = "block";
-                ind.style.left = x - 2 + "px";
-                ind.style.top = top + "px";
-                ind.style.height = height + "px";
-            }
-
-            function hideDropIndicator() {
-                if (_dropIndicator) _dropIndicator.style.display = "none";
-            }
 
             function setupDropContainer(container) {
                 container.addEventListener("dragover", (e) => {
                     e.preventDefault();
                     if (!SilverDraggedElement || !_dragPlaceholder) return;
-
                     if (_dragFramePending) return;
                     _dragFramePending = true;
+
                     requestAnimationFrame(() => {
                         _dragFramePending = false;
                         if (!SilverDraggedElement || !_dragPlaceholder) return;
@@ -1852,28 +1867,11 @@
                                 result.insertBefore,
                             );
                         }
-
-                        if (result.indicatorX !== null) {
-                            showDropIndicator(
-                                result.indicatorX,
-                                result.indicatorTop,
-                                result.indicatorHeight,
-                            );
-                        } else {
-                            hideDropIndicator();
-                        }
                     });
                 });
             }
 
             function getDragAfterElement(container, x, y) {
-                const noResult = {
-                    insertBefore: null,
-                    indicatorX: null,
-                    indicatorTop: 0,
-                    indicatorHeight: 0,
-                };
-
                 const items = [
                     ...container.querySelectorAll(".tier-item-wrap"),
                 ].filter(
@@ -1884,13 +1882,7 @@
                 );
 
                 if (items.length === 0) {
-                    const cbox = container.getBoundingClientRect();
-                    return {
-                        insertBefore: null,
-                        indicatorX: cbox.left + 6,
-                        indicatorTop: cbox.top + 4,
-                        indicatorHeight: cbox.height - 8,
-                    };
+                    return { insertBefore: null };
                 }
 
                 const ROW_TOLERANCE = 10;
@@ -1931,11 +1923,10 @@
                         { row: null, dist: Infinity },
                     ).row;
                 }
-                if (!targetRow) return noResult;
+                if (!targetRow) return { insertBefore: null };
 
                 targetRow.elements.sort((a, b) => a.box.left - b.box.left);
                 const elems = targetRow.elements;
-
                 let hoveredIdx = elems.length - 1;
                 for (let i = 0; i < elems.length; i++) {
                     if (x <= elems[i].box.right) {
@@ -1946,25 +1937,12 @@
 
                 const { el, box } = elems[hoveredIdx];
                 const center = box.left + box.width / 2;
-                const rowTop = targetRow.top;
-                const rowHeight = targetRow.bottom - targetRow.top;
 
                 if (x < center) {
-                    return {
-                        insertBefore: el,
-                        indicatorX: box.left,
-                        indicatorTop: rowTop,
-                        indicatorHeight: rowHeight,
-                    };
+                    return { insertBefore: el };
                 } else {
                     if (hoveredIdx + 1 < elems.length) {
-                        const nextEl = elems[hoveredIdx + 1].el;
-                        return {
-                            insertBefore: nextEl,
-                            indicatorX: box.right,
-                            indicatorTop: rowTop,
-                            indicatorHeight: rowHeight,
-                        };
+                        return { insertBefore: elems[hoveredIdx + 1].el };
                     } else {
                         const currentRowIndex = rows.indexOf(targetRow);
                         const nextRow = rows[currentRowIndex + 1];
@@ -1972,20 +1950,9 @@
                             nextRow.elements.sort(
                                 (a, b) => a.box.left - b.box.left,
                             );
-                            const firstOfNextRow = nextRow.elements[0];
-                            return {
-                                insertBefore: firstOfNextRow.el,
-                                indicatorX: box.right,
-                                indicatorTop: rowTop,
-                                indicatorHeight: rowHeight,
-                            };
+                            return { insertBefore: nextRow.elements[0].el };
                         }
-                        return {
-                            insertBefore: null,
-                            indicatorX: box.right,
-                            indicatorTop: rowTop,
-                            indicatorHeight: rowHeight,
-                        };
+                        return { insertBefore: null };
                     }
                 }
             }

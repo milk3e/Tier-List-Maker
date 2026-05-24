@@ -7,7 +7,7 @@ Current Version: 1.8
 This is a standalone HTML file you can open with your web browser, it lets you create [tier lists.](https://en.wikipedia.org/wiki/Tier_list)
 
 v1.0 was coded by [Google Gemini](https://gemini.google.com) 3.5 Flash, and it only took 2 iterations to make.
-Updates are coded by Google Gemini and [Claude](https://claude.com).
+Updates are coded by Google Gemini and [Claude](https://claude.com), and manually edited and tested by me.
 
 **Features**
 - Creatable, moveable, colorable, deletable tiers.

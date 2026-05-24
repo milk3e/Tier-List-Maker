@@ -272,24 +272,26 @@
                 left: 50%;
                 transform: translateX(-50%) scale(calc(1 / 2.2));
                 transform-origin: bottom center;
-                color: rgba(255,255,255,0.9);
+                color: rgba(255, 255, 255, 0.9);
                 font-size: 10px;
                 line-height: 1.3;
                 text-align: center;
                 white-space: nowrap;
                 pointer-events: none;
-                text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+                text-shadow:
+                    0 1px 3px rgba(0, 0, 0, 0.9),
+                    0 0 6px rgba(0, 0, 0, 0.7);
             }
             #portal-rank {
                 bottom: calc(100% + 2px);
                 font-size: 11px;
                 font-weight: bold;
-                color: rgba(255,220,100,0.95);
+                color: rgba(255, 220, 100, 0.95);
             }
             #portal-filename {
                 bottom: calc(100% + 16px);
                 font-size: 10px;
-                color: rgba(200,200,200,0.9);
+                color: rgba(200, 200, 200, 0.9);
             }
 
             #global-zoom-portal .portal-tooltip {
@@ -384,7 +386,7 @@
                 background: #3a7bc0;
             }
             #return-all-btn:hover {
-                background: #7a4e22 !important;
+                background: #555 !important;
             }
 
             .modal-img-preview {
@@ -519,8 +521,18 @@
                         "
                     ></span>
                 </h3>
-                <div style="margin-bottom: 8px;">
-                    <button id="return-all-btn" title="Move all images from tiers back to the bank" style="font-size: 0.85em; padding: 6px 10px; background: #5a3a1a;">⮐ Return All to Bank</button>
+                <div style="margin-bottom: 8px">
+                    <button
+                        id="return-all-btn"
+                        title="Move all images from tiers back to the bank"
+                        style="
+                            font-size: 0.85em;
+                            padding: 6px 10px;
+                            background: --panel-color;
+                        "
+                    >
+                        ⮐ Return All to Bank
+                    </button>
                 </div>
                 <div
                     class="image-bank aspect-mode-inactive"
@@ -541,8 +553,16 @@
 
         <!-- Global Portal Element to handle clipping-free high-res zoom -->
         <div id="global-zoom-portal">
-            <div id="portal-rank" class="portal-meta" style="display:none"></div>
-            <div id="portal-filename" class="portal-meta" style="display:none"></div>
+            <div
+                id="portal-rank"
+                class="portal-meta"
+                style="display: none"
+            ></div>
+            <div
+                id="portal-filename"
+                class="portal-meta"
+                style="display: none"
+            ></div>
             <img id="portal-img" src="" alt="Zoom Preview" />
             <div
                 id="portal-text"
@@ -659,7 +679,16 @@
                     src=""
                     alt="Preview"
                 />
-                <div id="modal-item-filename" style="font-size: 0.8em; color: #aaa; text-align: center; word-break: break-all; padding: 2px 0 4px;"></div>
+                <div
+                    id="modal-item-filename"
+                    style="
+                        font-size: 0.8em;
+                        color: #aaa;
+                        text-align: center;
+                        word-break: break-all;
+                        padding: 2px 0 4px;
+                    "
+                ></div>
                 <label>
                     Description / Notes:
                     <textarea
@@ -1351,7 +1380,7 @@
                         }
 
                         const updatedFileNames = {};
-                        for (const currentKey in (state.fileNames || {})) {
+                        for (const currentKey in state.fileNames || {}) {
                             const matchingSrc = imageRegistry[currentKey];
                             if (matchingSrc) {
                                 const portableDataStr =
@@ -1615,12 +1644,22 @@
                 document
                     .getElementById("return-all-btn")
                     .addEventListener("click", () => {
-                        const tieredCount = state.tiers.reduce((sum, t) => sum + t.images.length, 0);
+                        const tieredCount = state.tiers.reduce(
+                            (sum, t) => sum + t.images.length,
+                            0,
+                        );
                         if (tieredCount === 0) {
-                            showToast("No images are currently placed in any tier.");
+                            showToast(
+                                "No images are currently placed in any tier.",
+                            );
                             return;
                         }
-                        if (!confirm(`Return all ${tieredCount} image(s) from tiers back to the bank?`)) return;
+                        if (
+                            !confirm(
+                                `Return all ${tieredCount} image(s) from tiers back to the bank?`,
+                            )
+                        )
+                            return;
                         syncStateFromDOM();
                         state.tiers.forEach((tier) => {
                             state.bank.push(...tier.images);
@@ -1629,7 +1668,9 @@
                         renderBoard();
                         renderBank();
                         markUnsaved();
-                        showToast(`${tieredCount} image(s) returned to the bank.`);
+                        showToast(
+                            `${tieredCount} image(s) returned to the bank.`,
+                        );
                     });
             }
 
@@ -1669,8 +1710,13 @@
                 document.getElementById("modal-item-desc").value = savedDesc;
 
                 const fileObj = blobRegistry[key];
-                const filenameEl = document.getElementById("modal-item-filename");
-                const fname = (state.fileNames && state.fileNames[key]) || (fileObj && fileObj.name) || null;
+                const filenameEl = document.getElementById(
+                    "modal-item-filename",
+                );
+                const fname =
+                    (state.fileNames && state.fileNames[key]) ||
+                    (fileObj && fileObj.name) ||
+                    null;
                 if (fname) {
                     filenameEl.textContent = fname;
                     filenameEl.style.display = "block";
@@ -1685,7 +1731,9 @@
                 let rank = 0;
                 // Count all images in tiers (top-down, left-to-right)
                 for (const row of document.querySelectorAll(".tier-row")) {
-                    for (const wrap of row.querySelectorAll(".tier-item-wrap")) {
+                    for (const wrap of row.querySelectorAll(
+                        ".tier-item-wrap",
+                    )) {
                         rank++;
                         if (wrap === wrapperElement) return rank;
                     }
@@ -1700,7 +1748,8 @@
                 const portalImg = document.getElementById("portal-img");
                 const portalText = document.getElementById("portal-text");
                 const portalRank = document.getElementById("portal-rank");
-                const portalFilename = document.getElementById("portal-filename");
+                const portalFilename =
+                    document.getElementById("portal-filename");
                 const rect = imgElement.getBoundingClientRect();
 
                 portalImg.src = imgElement.src;
@@ -1723,7 +1772,10 @@
 
                 // Filename
                 const fileObj = blobRegistry[key];
-                const fname = (state.fileNames && state.fileNames[key]) || (fileObj && fileObj.name) || null;
+                const fname =
+                    (state.fileNames && state.fileNames[key]) ||
+                    (fileObj && fileObj.name) ||
+                    null;
                 if (fname) {
                     portalFilename.textContent = fname;
                     portalFilename.style.display = "block";
@@ -1991,12 +2043,17 @@
 
                         if (result.insertBefore == null) {
                             // Only append if placeholder isn't already the last child
-                            if (container.lastElementChild !== _dragPlaceholder) {
+                            if (
+                                container.lastElementChild !== _dragPlaceholder
+                            ) {
                                 container.appendChild(_dragPlaceholder);
                             }
                         } else if (result.insertBefore !== _dragPlaceholder) {
                             // Don't move if placeholder is already immediately before the target
-                            if (_dragPlaceholder.nextElementSibling !== result.insertBefore) {
+                            if (
+                                _dragPlaceholder.nextElementSibling !==
+                                result.insertBefore
+                            ) {
                                 container.insertBefore(
                                     _dragPlaceholder,
                                     result.insertBefore,
@@ -2008,7 +2065,9 @@
             }
 
             function getDragAfterElement(container, x, y) {
-                const allWraps = [...container.querySelectorAll(".tier-item-wrap")];
+                const allWraps = [
+                    ...container.querySelectorAll(".tier-item-wrap"),
+                ];
                 const items = allWraps.filter(
                     (el) =>
                         !el.classList.contains("drag-placeholder") &&
@@ -2046,7 +2105,10 @@
                 // Find which row the cursor is directly over
                 let targetRow = null;
                 for (const r of rows) {
-                    if (y >= r.top - ROW_TOLERANCE && y <= r.bottom + ROW_TOLERANCE) {
+                    if (
+                        y >= r.top - ROW_TOLERANCE &&
+                        y <= r.bottom + ROW_TOLERANCE
+                    ) {
                         targetRow = r;
                         break;
                     }
@@ -2058,7 +2120,10 @@
                     // if the placeholder is already rendered below row[i]'s bottom,
                     // don't snap back to row[i] — prefer the row below the gap.
                     let phBottom = -Infinity;
-                    if (_dragPlaceholder && _dragPlaceholder.parentNode === container) {
+                    if (
+                        _dragPlaceholder &&
+                        _dragPlaceholder.parentNode === container
+                    ) {
                         phBottom = _dragPlaceholder.getBoundingClientRect().top;
                     }
 

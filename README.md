@@ -34,6 +34,6 @@ In Firefox (or any Firefox fork), pressing Ctrl+I opens page info. While on a pa
 Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once (can be around ~1000 images at a time where it 'overloads'). A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
 
 
-*Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited and tested by me.*
+*Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*
 
 *This project is dedicated to the public domain [(CC0)](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to copy, modify, distribute, or do whatever you want with it.*

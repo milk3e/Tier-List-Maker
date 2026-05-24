@@ -15,6 +15,7 @@ Updates are coded by Google Gemini and [Claude](https://claude.com).
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
 - Export tier list as image with selectable quality.
 - Append descriptions to images to add any information you want.
+- Adjust settings to change the workflow to your liking.
 - Lightweight, bloat-free, fully offline and local.
 
 **How to Download**

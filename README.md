@@ -2,7 +2,7 @@ Current Version: 1.8
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
-<img width="600" height="318" alt="t" src="https://github.com/user-attachments/assets/7f2dd005-6e54-46fe-aeb2-84ef17b26b3f" />
+<img width="500" height="265" alt="t" src="https://github.com/user-attachments/assets/7f2dd005-6e54-46fe-aeb2-84ef17b26b3f" />
 
 This is a standalone HTML file you can open with your web browser, it lets you create [tier lists.](https://en.wikipedia.org/wiki/Tier_list)
 

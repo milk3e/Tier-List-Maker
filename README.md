@@ -10,7 +10,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Creatable, moveable, colorable, deletable tiers.
 - Import images by file or by URL, move and sort within tiers, can crop into squares or keep aspect ratio, and can delete them.
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
-- Export tier list as image with selectable quality.
+- Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.
 - Adjustable settings to change the workflow to your liking.
 - Lightweight, bloat-free, fully offline and local.

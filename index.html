@@ -1,0 +1,2214 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Tier List Maker</title>
+        <style>
+            :root {
+                --bg-color: #1a1a1a;
+                --text-color: #ffffff;
+                --panel-color: #2a2a2a;
+            }
+            body {
+                font-family: sans-serif;
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                margin: 20px;
+                user-select: none;
+            }
+
+            /* Main Workspace Layout Wrapper */
+            .workspace-container {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                transition: flex-direction 0.3s ease;
+            }
+            .workspace-container.sidebar-mode {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .workspace-container.sidebar-mode #tier-board {
+                flex-grow: 1;
+                width: 70%;
+            }
+
+            .workspace-container.sidebar-mode .image-bank-container {
+                width: 28%;
+                position: sticky;
+                top: 20px;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                z-index: 10;
+            }
+
+            .workspace-container.sidebar-mode #image-bank {
+                flex-grow: 1;
+                overflow-y: auto;
+                max-height: 70vh;
+            }
+
+            /* Toolbar */
+            .toolbar {
+                background: var(--panel-color);
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            button,
+            input[type="file"],
+            select {
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: none;
+                background: #444;
+                color: #fff;
+                cursor: pointer;
+            }
+            button:hover {
+                background: #555;
+            }
+
+            /* Tier Board */
+            .tier-board {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                margin-bottom: 20px;
+            }
+            .tier-row {
+                display: flex;
+                background: #111;
+                min-height: 80px;
+                border: 1px solid #333;
+            }
+
+            /* Reorder Handle Column */
+            .tier-handle {
+                width: 30px;
+                background: #222;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 8px;
+                border-right: 1px solid #333;
+                flex-shrink: 0;
+            }
+            .handle-btn {
+                background: none;
+                border: none;
+                color: #666;
+                font-size: 14px;
+                padding: 2px;
+                cursor: pointer;
+            }
+            .handle-btn:hover {
+                color: #fff;
+            }
+
+            /* Tier Label Column */
+            .tier-label {
+                width: 140px;
+                min-width: 140px;
+                max-width: 140px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px;
+                text-align: center;
+                font-weight: bold;
+                color: #000;
+                cursor: pointer;
+                transition: filter 0.1s;
+                box-sizing: border-box;
+                word-break: break-word;
+                overflow-wrap: break-word;
+            }
+            .tier-label:hover {
+                filter: brightness(1.1);
+            }
+            .tier-label span {
+                width: 100%;
+                display: -webkit-box;
+                -webkit-line-clamp: 4;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            /* Image Grids */
+            .tier-items {
+                display: flex;
+                flex-wrap: wrap;
+                align-content: flex-start;
+                gap: 6px;
+                padding: 6px;
+                flex-grow: 1;
+                min-height: 72px;
+            }
+            .image-bank-container {
+                background: var(--panel-color);
+                padding: 15px;
+                border-radius: 8px;
+            }
+            .image-bank {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                min-height: 150px;
+                background: #151515;
+                padding: 10px;
+                border-radius: 4px;
+                border: 2px dashed #444;
+            }
+
+            /* Grid Layout Wrapper Setup */
+            .tier-item-wrap {
+                position: relative;
+                display: inline-grid;
+                grid-template-areas: "stack";
+                place-items: center;
+            }
+
+            /* THE HITBOX TRIGGER CONTAINER */
+            .hitbox-trigger {
+                grid-area: stack;
+                width: 100%;
+                height: 100%;
+                z-index: 10;
+                cursor: grab;
+                background: transparent;
+            }
+
+            /* Core Item Images Layout Base Styling */
+            .tier-item-img {
+                grid-area: stack;
+                display: block;
+                z-index: 1;
+                pointer-events: none;
+            }
+
+            /* Layout Mode Variations */
+            .aspect-mode-inactive .tier-item-wrap,
+            .aspect-mode-inactive .drag-placeholder {
+                width: 70px;
+                height: 70px;
+                aspect-ratio: auto;
+            }
+            .aspect-mode-inactive .tier-item-img,
+            .aspect-mode-inactive .drag-placeholder img {
+                width: 70px;
+                height: 70px;
+                object-fit: cover;
+            }
+
+            .aspect-mode-active .tier-item-wrap,
+            .aspect-mode-active .drag-placeholder {
+                height: 70px;
+                width: auto;
+                aspect-ratio: auto;
+            }
+            .aspect-mode-active .tier-item-img,
+            .aspect-mode-active .drag-placeholder img {
+                height: 70px;
+                width: auto;
+                object-fit: contain;
+            }
+
+            /* Dynamic Native Drag Placeholder Spot Maker */
+            .drag-placeholder {
+                display: inline-block;
+                opacity: 0.6;
+                pointer-events: none;
+                box-sizing: border-box;
+                border: 2px dashed #4af;
+                background: rgba(68, 170, 255, 0.1);
+            }
+            .drag-placeholder img {
+                display: block;
+                opacity: 0.6;
+            }
+            .drag-placeholder.bar-style {
+                width: 4px !important;
+                background: #4af;
+                border: none;
+                opacity: 1;
+                margin: 0 2px;
+            }
+            .drag-placeholder.bar-style img {
+                display: none !important;
+            }
+
+            /* GLOBAL ZOOM PORTAL PREVIEW */
+            #global-zoom-portal {
+                position: fixed;
+                width: 70px;
+                height: 70px;
+                pointer-events: none;
+                z-index: 99999;
+                display: none;
+                transform-origin: center center;
+                transform: scale(2.2);
+                transition: opacity 0.1s ease;
+                opacity: 0;
+            }
+
+            #global-zoom-portal img {
+                width: 100% !important;
+                height: 100% !important;
+                display: block;
+                object-fit: contain !important;
+                filter: drop-shadow(0px 6px 12px rgba(0, 0, 0, 0.85));
+            }
+
+            #global-zoom-portal .portal-meta {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%) scale(calc(1 / 2.2));
+                transform-origin: bottom center;
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 10px;
+                line-height: 1.3;
+                text-align: center;
+                white-space: nowrap;
+                pointer-events: none;
+                text-shadow:
+                    0 1px 3px rgba(0, 0, 0, 0.9),
+                    0 0 6px rgba(0, 0, 0, 0.7);
+            }
+            #portal-rank {
+                bottom: calc(100% + 2px);
+                font-size: 11px;
+                font-weight: bold;
+                color: rgba(255, 220, 100, 0.95);
+            }
+            #portal-filename {
+                bottom: calc(100% + 16px);
+                font-size: 10px;
+                color: rgba(200, 200, 200, 0.9);
+            }
+
+            #global-zoom-portal .portal-tooltip {
+                position: absolute;
+                top: 76px;
+                left: 50%;
+                transform: translateX(-50%) scale(calc(1 / 2.2));
+                transform-origin: top center;
+                background: rgba(0, 0, 0, 0.95);
+                color: #fff;
+                padding: 6px 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                line-height: 1.4;
+                min-width: 140px;
+                max-width: 280px;
+                width: max-content;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+                border: 1px solid #555;
+                word-break: break-word;
+                white-space: normal;
+            }
+
+            /* Modal Popup Windows */
+            .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                visibility: hidden;
+                opacity: 0;
+                transition:
+                    opacity 0.2s,
+                    visibility 0.2s;
+            }
+            .modal-overlay.active {
+                visibility: visible;
+                opacity: 1;
+            }
+            .modal-content {
+                background: #2a2a2a;
+                padding: 20px;
+                border-radius: 8px;
+                width: 340px;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            }
+            .modal-content label {
+                font-weight: bold;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .modal-content input[type="text"],
+            .modal-content textarea {
+                padding: 8px;
+                background: #444;
+                border: none;
+                color: #fff;
+                border-radius: 4px;
+                font-family: sans-serif;
+            }
+            .modal-content textarea {
+                resize: vertical;
+                height: 80px;
+            }
+            .modal-actions {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .btn-danger {
+                background: #8a1818;
+            }
+            .btn-danger:hover {
+                background: #aa2222;
+            }
+            .btn-info {
+                background: #2b5c8f;
+            }
+            .btn-info:hover {
+                background: #3a7bc0;
+            }
+            #return-all-btn:hover {
+                background: #555 !important;
+            }
+
+            .modal-img-preview {
+                max-width: 100%;
+                max-height: 260px;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                display: block;
+                margin: 0 auto;
+                border-radius: 4px;
+            }
+
+            /* Loading overlay styling rules */
+            .loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+                visibility: hidden;
+                opacity: 0;
+                transition:
+                    opacity 0.15s,
+                    visibility 0.15s;
+            }
+            .loading-overlay.active {
+                visibility: visible;
+                opacity: 1;
+            }
+            .loading-overlay.standby {
+                visibility: visible;
+                opacity: 1;
+                background: rgba(0, 0, 0, 0.35);
+                cursor: pointer;
+            }
+            .loading-overlay.standby .loading-spinner {
+                border-top-color: #888;
+                animation-duration: 1.4s;
+            }
+            #loading-dismiss-hint {
+                margin-top: 10px;
+                font-size: 0.78em;
+                color: #aaa;
+                display: none;
+            }
+            .loading-overlay.standby #loading-dismiss-hint {
+                display: block;
+            }
+            .loading-spinner {
+                width: 40px;
+                height: 40px;
+                border: 4px solid #444;
+                border-top: 4px solid #3a7bc0;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin-bottom: 10px;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Toast notification */
+            #toast-notification {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%) translateY(20px);
+                background: rgba(30, 30, 30, 0.96);
+                color: #fff;
+                padding: 12px 22px;
+                border-radius: 8px;
+                font-size: 0.9em;
+                border: 1px solid #4af;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+                z-index: 3000;
+                opacity: 0;
+                transition:
+                    opacity 0.25s ease,
+                    transform 0.25s ease;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+            #toast-notification.visible {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        </style>
+    </head>
+    <body>
+        <h1
+            id="page-title"
+            title="Click to edit title"
+            style="cursor: pointer; display: inline-block"
+        >
+            Tier List Maker
+        </h1>
+
+        <div class="toolbar">
+            <input type="file" id="image-loader" multiple accept="image/*" />
+            <button id="add-url-btn">Add Image URL</button>
+            <button id="add-tier-btn">Add New Tier</button>
+            <button id="settings-open-btn">⚙ Layout & Settings</button>
+            <button id="export-json-btn">Export JSON</button>
+            <button id="import-json-btn">Import JSON</button>
+            <button id="export-image-btn">Export Image</button>
+        </div>
+
+        <div class="workspace-container" id="workspace">
+            <div class="tier-board aspect-mode-inactive" id="tier-board"></div>
+
+            <div class="image-bank-container">
+                <h3>
+                    Image Bank
+                    <span
+                        id="bank-count"
+                        style="
+                            font-size: 0.7em;
+                            font-weight: normal;
+                            color: #aaa;
+                        "
+                    ></span>
+                </h3>
+                <div style="margin-bottom: 8px">
+                    <button
+                        id="return-all-btn"
+                        title="Move all images from tiers back to the bank"
+                        style="
+                            font-size: 0.85em;
+                            padding: 6px 10px;
+                            background: --panel-color;
+                        "
+                    >
+                        ⮐ Return All to Bank
+                    </button>
+                </div>
+                <div
+                    class="image-bank aspect-mode-inactive"
+                    id="image-bank"
+                ></div>
+            </div>
+        </div>
+
+        <!-- Toast notification -->
+        <div id="toast-notification"></div>
+
+        <!-- Dynamic Screen Loading HUD Component Layer -->
+        <div id="loading-indicator" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div id="loading-text" style="font-weight: bold">Processing...</div>
+            <div id="loading-dismiss-hint">Click anywhere to dismiss</div>
+        </div>
+
+        <!-- Global Portal Element to handle clipping-free high-res zoom -->
+        <div id="global-zoom-portal">
+            <div
+                id="portal-rank"
+                class="portal-meta"
+                style="display: none"
+            ></div>
+            <div
+                id="portal-filename"
+                class="portal-meta"
+                style="display: none"
+            ></div>
+            <img id="portal-img" src="" alt="Zoom Preview" />
+            <div
+                id="portal-text"
+                class="portal-tooltip"
+                style="display: none"
+            ></div>
+        </div>
+
+        <!-- Global Global Settings App Modular Window -->
+        <div id="settings-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 320px">
+                <h3>Application Settings</h3>
+                <label>
+                    Image Aspect Ratio:
+                    <select
+                        id="settings-aspect-ratio"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="square">Force Square (Crop)</option>
+                        <option value="aspect">Keep Aspect Ratio</option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Image Bank Layout:
+                    <select
+                        id="settings-layout-mode"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="bottom">Bottom Workspace Bank</option>
+                        <option value="sidebar">
+                            Right Sidebar Workspace Bank
+                        </option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Drag & Drop Preview:
+                    <select
+                        id="settings-indicator-style"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="preview">
+                            Semi-Transparent Image Preview
+                        </option>
+                        <option value="bar">Blue Bar</option>
+                    </select>
+                </label>
+                <div
+                    class="modal-actions"
+                    style="justify-content: flex-end; margin-top: 15px"
+                >
+                    <button id="settings-close-btn" class="btn-info">
+                        Close Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tier-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>Tier Settings</h3>
+                <label>
+                    Label Text:
+                    <input type="text" id="modal-tier-name" />
+                </label>
+                <label>
+                    Label Color:
+                    <input type="color" id="modal-tier-color" />
+                </label>
+                <div class="modal-actions">
+                    <button id="modal-delete-btn" class="btn-danger">
+                        Delete Tier
+                    </button>
+                    <button id="modal-close-btn">Save & Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Image Quality Modal -->
+        <div id="export-image-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 300px">
+                <h3>Export Tier List as Image</h3>
+                <label>
+                    Quality:
+                    <select
+                        id="export-image-quality"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="1.5">Low (1.5x)</option>
+                        <option value="3" selected>High (3x)</option>
+                        <option value="6">Very High (6x)</option>
+                        <option value="12">Extreme (12x)</option>
+                        <option value="24">Insane (24x)</option>
+                    </select>
+                </label>
+                <p style="color: #aaa; font-size: 0.85em; margin: 0">
+                    Resolution scales dynamically with the list size. High scale
+                    factors require significant browser memory allocation.
+                </p>
+                <div class="modal-actions">
+                    <button id="export-image-cancel-btn">Cancel</button>
+                    <button id="export-image-confirm-btn" class="btn-info">
+                        Download
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="item-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>Image Settings</h3>
+                <img
+                    id="modal-item-preview"
+                    class="modal-img-preview"
+                    src=""
+                    alt="Preview"
+                />
+                <div
+                    id="modal-item-filename"
+                    style="
+                        font-size: 0.8em;
+                        color: #aaa;
+                        text-align: center;
+                        word-break: break-all;
+                        padding: 2px 0 4px;
+                    "
+                ></div>
+                <label>
+                    Description / Notes:
+                    <textarea
+                        id="modal-item-desc"
+                        placeholder="Type an item description here..."
+                    ></textarea>
+                </label>
+                <div class="modal-actions">
+                    <button
+                        id="modal-item-delete-btn"
+                        class="btn-danger"
+                        title="Permanently delete item"
+                    >
+                        Delete
+                    </button>
+                    <button
+                        id="modal-item-view-btn"
+                        class="btn-info"
+                        title="Open full scale asset in a new tab"
+                    >
+                        View Image
+                    </button>
+                    <button id="modal-item-save-btn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let state = {
+                settings: {
+                    aspectRatio: "square",
+                    layout: "bottom",
+                    indicatorStyle: "preview",
+                },
+                title: "Tier List Maker",
+                tiers: [
+                    { id: "t1", name: "S", color: "#ff7f7f", images: [] },
+                    { id: "t2", name: "A", color: "#ffbf7f", images: [] },
+                    { id: "t3", name: "B", color: "#ffdf7f", images: [] },
+                    { id: "t4", name: "C", color: "#ffff7f", images: [] },
+                    { id: "t5", name: "D", color: "#bfff7f", images: [] },
+                    { id: "t6", name: "E", color: "#7fffff", images: [] },
+                    { id: "t7", name: "F", color: "#bf7fff", images: [] },
+                ],
+                bank: [],
+                descriptions: {},
+                fileNames: {},
+            };
+
+            let SilverDraggedElement = null;
+            let activeModalTierId = null;
+            let activeModalItemWrap = null;
+            let hasUnsavedChanges = false;
+
+            const imageRegistry = {};
+            const blobRegistry = {};
+            const srcToKey = new Map();
+
+            function generateStringHash(str) {
+                let hash = 0;
+                if (str.length === 0) return "hash_0";
+                for (let i = 0; i < str.length; i++) {
+                    const chr = str.charCodeAt(i);
+                    hash = (hash << 5) - hash + chr;
+                    hash |= 0;
+                }
+                return "img_" + Math.abs(hash);
+            }
+
+            function registerImage(src, file = null) {
+                if (srcToKey.has(src)) return srcToKey.get(src);
+                let key;
+                if (src.startsWith("blob:") && file) {
+                    key = generateStringHash(file.name + "_" + file.size);
+                } else {
+                    key = generateStringHash(src);
+                }
+                imageRegistry[key] = src;
+                srcToKey.set(src, key);
+                if (file) {
+                    blobRegistry[key] = file;
+                    if (file.name) {
+                        if (!state.fileNames) state.fileNames = {};
+                        state.fileNames[key] = file.name;
+                    }
+                }
+                return key;
+            }
+
+            function unregisterImage(key) {
+                const src = imageRegistry[key];
+                if (src) {
+                    srcToKey.delete(src);
+                    if (src.startsWith("blob:")) URL.revokeObjectURL(src);
+                }
+                delete imageRegistry[key];
+                delete blobRegistry[key];
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
+                renderBoard();
+                renderBank();
+                setupEventListeners();
+                applyLayoutMode(state.settings.layout);
+                setupTitleEdit(document.getElementById("page-title"));
+            });
+
+            function markUnsaved() {
+                hasUnsavedChanges = true;
+            }
+            function clearUnsaved() {
+                hasUnsavedChanges = false;
+            }
+
+            window.addEventListener("beforeunload", (e) => {
+                if (hasUnsavedChanges) {
+                    e.preventDefault();
+                    e.returnValue =
+                        "You have unsaved changes on your tier list. Are you sure you want to leave?";
+                }
+            });
+
+            function showLoading(msg) {
+                document.getElementById("loading-text").innerText =
+                    msg || "Processing...";
+                document
+                    .getElementById("loading-indicator")
+                    .classList.add("active");
+            }
+
+            function hideLoading() {
+                document
+                    .getElementById("loading-indicator")
+                    .classList.remove("active");
+            }
+
+            function showToast(msg, duration = 4000) {
+                const toast = document.getElementById("toast-notification");
+                toast.textContent = msg;
+                toast.classList.add("visible");
+                clearTimeout(toast._hideTimer);
+                toast._hideTimer = setTimeout(() => {
+                    toast.classList.remove("visible");
+                }, duration);
+            }
+
+            function applyLayoutMode(mode) {
+                const workspace = document.getElementById("workspace");
+                if (mode === "sidebar") {
+                    state.settings.layout = "sidebar";
+                    workspace.classList.add("sidebar-mode");
+                } else {
+                    state.settings.layout = "bottom";
+                    workspace.classList.remove("sidebar-mode");
+                }
+            }
+
+            function createDragGhostCanvas(imgElement) {
+                const imgW = imgElement.naturalWidth || imgElement.width || 70;
+                const imgH =
+                    imgElement.naturalHeight || imgElement.height || 70;
+                let canvasW = 70;
+                let canvasH = 70;
+
+                if (state.settings.aspectRatio === "aspect") {
+                    const ratio = imgW / imgH;
+                    canvasW = 70 * ratio;
+                    canvasH = 70;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = canvasW;
+                canvas.height = canvasH;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) return null;
+
+                if (state.settings.aspectRatio === "square") {
+                    const scale = Math.max(70 / imgW, 70 / imgH);
+                    const nw = imgW * scale;
+                    const nh = imgH * scale;
+                    const nx = (70 - nw) / 2;
+                    const ny = (70 - nh) / 2;
+                    ctx.drawImage(imgElement, nx, ny, nw, nh);
+                } else {
+                    ctx.drawImage(imgElement, 0, 0, canvasW, canvasH);
+                }
+
+                return {
+                    canvas: canvas,
+                    offsetX: canvasW / 2,
+                    offsetY: canvasH / 2,
+                };
+            }
+
+            function updateGlobalAspectClass() {
+                const board = document.getElementById("tier-board");
+                const bank = document.getElementById("image-bank");
+                if (state.settings.aspectRatio === "aspect") {
+                    board.classList.add("aspect-mode-active");
+                    board.classList.remove("aspect-mode-inactive");
+                    bank.classList.add("aspect-mode-active");
+                    bank.classList.remove("aspect-mode-inactive");
+                } else {
+                    board.classList.remove("aspect-mode-active");
+                    board.classList.add("aspect-mode-inactive");
+                    bank.classList.remove("aspect-mode-active");
+                    bank.classList.add("aspect-mode-inactive");
+                }
+            }
+
+            function setupTitleEdit(h1El) {
+                h1El.addEventListener("click", () => {
+                    const current = h1El.innerText;
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.value = current;
+                    input.style.cssText =
+                        "font-size:inherit; font-weight:inherit; font-family:inherit; background:#333; color:#fff; border:2px solid #4af; border-radius:4px; padding:2px 8px; width:" +
+                        Math.max(220, current.length * 16 + 40) +
+                        "px;";
+                    h1El.replaceWith(input);
+                    input.focus();
+                    input.select();
+                    let committed = false;
+                    const commit = () => {
+                        if (committed) return;
+                        committed = true;
+                        const newTitle =
+                            input.value.trim() || "Tier List Maker";
+                        const newH1 = document.createElement("h1");
+                        newH1.id = "page-title";
+                        newH1.title = "Click to edit title";
+                        newH1.style.cssText =
+                            "cursor:pointer; display:inline-block;";
+                        newH1.innerText = newTitle;
+                        input.replaceWith(newH1);
+                        document.title = newTitle;
+                        state.title = newTitle;
+                        setupTitleEdit(newH1);
+                        markUnsaved();
+                    };
+                    input.addEventListener("blur", commit);
+                    input.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            commit();
+                        }
+                        if (e.key === "Escape") {
+                            input.value = current;
+                            commit();
+                        }
+                    });
+                });
+            }
+
+            function exportTierListImage(quality) {
+                const board = document.getElementById("tier-board");
+                const rows = board.querySelectorAll(".tier-row");
+                if (rows.length === 0) {
+                    alert("No tier rows to export.");
+                    return;
+                }
+
+                const scale = parseFloat(quality) || 1;
+                const boardRect = board.getBoundingClientRect();
+                let maxContentRight = 0;
+
+                rows.forEach((row) => {
+                    const label = row.querySelector(".tier-label");
+                    if (label) {
+                        const r =
+                            label.getBoundingClientRect().right -
+                            boardRect.left;
+                        if (r > maxContentRight) maxContentRight = r;
+                    }
+                    const imgs = row.querySelectorAll(".tier-item-img");
+                    imgs.forEach((img) => {
+                        const r =
+                            img.getBoundingClientRect().right - boardRect.left;
+                        if (r > maxContentRight) maxContentRight = r;
+                    });
+                });
+
+                const PADDING = 6;
+                const contentWidth = Math.round(
+                    Math.min(maxContentRight + PADDING, boardRect.width),
+                );
+                let handleWidth = 0;
+                const firstHandle = rows[0].querySelector(".tier-handle");
+                if (firstHandle) {
+                    handleWidth = Math.round(
+                        firstHandle.getBoundingClientRect().width,
+                    );
+                }
+
+                const W = contentWidth - handleWidth;
+                const H = Math.round(boardRect.height);
+                const canvas = document.createElement("canvas");
+
+                try {
+                    canvas.width = Math.round(W * scale);
+                    canvas.height = Math.round(H * scale);
+                } catch (e) {
+                    hideLoading();
+                    alert(
+                        "The resolution requested exceeds browser canvas technical limits. Try a lower quality multiplier option.",
+                    );
+                    return;
+                }
+
+                const ctx = canvas.getContext("2d");
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = "#111";
+                ctx.fillRect(0, 0, W, H);
+
+                const rowPromises = [];
+                rows.forEach((row) => {
+                    const rRect = row.getBoundingClientRect();
+                    const originX = boardRect.left + handleWidth;
+                    const ry = rRect.top - boardRect.top;
+                    const rw = W;
+                    const rh = rRect.height;
+
+                    ctx.fillStyle = "#111";
+                    ctx.fillRect(0, ry, rw, rh);
+
+                    ctx.strokeStyle = "#333";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(0.5, ry + 0.5, rw - 1, rh - 1);
+
+                    const label = row.querySelector(".tier-label");
+                    if (label) {
+                        const lRect = label.getBoundingClientRect();
+                        const lx = lRect.left - originX;
+                        const ly = lRect.top - boardRect.top;
+                        ctx.fillStyle = label.style.backgroundColor || "#888";
+                        ctx.fillRect(lx, ly, lRect.width, lRect.height);
+
+                        const span = label.querySelector("span");
+                        const labelText = span
+                            ? span.innerText
+                            : label.innerText;
+                        ctx.fillStyle = "#000";
+                        ctx.font = `bold ${Math.round(lRect.height * 0.22)}px sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        const maxW = lRect.width - 12;
+                        const lineH = lRect.height * 0.24;
+                        const words = labelText.split(" ");
+                        let lines = [];
+                        let cur = "";
+                        for (const w of words) {
+                            const test = cur ? cur + " " + w : w;
+                            if (ctx.measureText(test).width > maxW && cur) {
+                                lines.push(cur);
+                                cur = w;
+                            } else {
+                                cur = test;
+                            }
+                        }
+                        if (cur) lines.push(cur);
+                        const totalH = lines.length * lineH;
+                        const startY =
+                            ly + lRect.height / 2 - totalH / 2 + lineH / 2;
+                        lines.forEach((line, i) => {
+                            ctx.fillText(
+                                line,
+                                lx + lRect.width / 2,
+                                startY + i * lineH,
+                            );
+                        });
+                    }
+
+                    const imgs = row.querySelectorAll(".tier-item-img");
+                    imgs.forEach((img) => {
+                        const iRect = img.getBoundingClientRect();
+                        const ix = iRect.left - originX;
+                        const iy = iRect.top - boardRect.top;
+                        const dw = iRect.width;
+                        const dh = iRect.height;
+                        rowPromises.push(
+                            new Promise((res) => {
+                                try {
+                                    const nw = img.naturalWidth || dw;
+                                    const nh = img.naturalHeight || dh;
+                                    if (
+                                        state.settings.aspectRatio ===
+                                            "square" &&
+                                        nw > 0 &&
+                                        nh > 0
+                                    ) {
+                                        const scaleF = Math.max(
+                                            dw / nw,
+                                            dh / nh,
+                                        );
+                                        const sw = dw / scaleF;
+                                        const sh = dh / scaleF;
+                                        const sx = (nw - sw) / 2;
+                                        const sy = (nh - sh) / 2;
+                                        ctx.drawImage(
+                                            img,
+                                            sx,
+                                            sy,
+                                            sw,
+                                            sh,
+                                            ix,
+                                            iy,
+                                            dw,
+                                            dh,
+                                        );
+                                    } else {
+                                        ctx.drawImage(img, ix, iy, dw, dh);
+                                    }
+                                } catch (e) {}
+                                res();
+                            }),
+                        );
+                    });
+                });
+
+                Promise.all(rowPromises).then(() => {
+                    try {
+                        const link = document.createElement("a");
+                        link.download = "tier-list.png";
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+                    } catch (err) {
+                        alert(
+                            "Failed to export image asset string data. The list may contain mixed-origin web URL objects.",
+                        );
+                    }
+                    hideLoading();
+                });
+            }
+
+            function setupEventListeners() {
+                // --- Settings Application Bindings ---
+                document
+                    .getElementById("settings-open-btn")
+                    .addEventListener("click", () => {
+                        document.getElementById("settings-aspect-ratio").value =
+                            state.settings.aspectRatio || "square";
+                        document.getElementById("settings-layout-mode").value =
+                            state.settings.layout || "bottom";
+                        document.getElementById(
+                            "settings-indicator-style",
+                        ).value = state.settings.indicatorStyle || "preview";
+                        document
+                            .getElementById("settings-modal")
+                            .classList.add("active");
+                    });
+
+                document
+                    .getElementById("settings-close-btn")
+                    .addEventListener("click", () => {
+                        const aspectVal = document.getElementById(
+                            "settings-aspect-ratio",
+                        ).value;
+                        const layoutVal = document.getElementById(
+                            "settings-layout-mode",
+                        ).value;
+                        const indicatorVal = document.getElementById(
+                            "settings-indicator-style",
+                        ).value;
+
+                        state.settings.aspectRatio = aspectVal;
+                        state.settings.indicatorStyle = indicatorVal;
+
+                        applyLayoutMode(layoutVal);
+                        updateGlobalAspectClass();
+
+                        document
+                            .getElementById("settings-modal")
+                            .classList.remove("active");
+                        markUnsaved();
+                    });
+
+                document
+                    .getElementById("export-image-btn")
+                    .addEventListener("click", () => {
+                        document
+                            .getElementById("export-image-modal")
+                            .classList.add("active");
+                    });
+
+                document
+                    .getElementById("export-image-cancel-btn")
+                    .addEventListener("click", () => {
+                        document
+                            .getElementById("export-image-modal")
+                            .classList.remove("active");
+                    });
+
+                document
+                    .getElementById("export-image-confirm-btn")
+                    .addEventListener("click", () => {
+                        const quality = document.getElementById(
+                            "export-image-quality",
+                        ).value;
+                        document
+                            .getElementById("export-image-modal")
+                            .classList.remove("active");
+                        showLoading("Rendering tier list image...");
+                        setTimeout(() => {
+                            exportTierListImage(quality);
+                        }, 80);
+                    });
+
+                const imageLoaderInput =
+                    document.getElementById("image-loader");
+                const loadingEl = document.getElementById("loading-indicator");
+                let _imageImportExpected = false;
+
+                function enterStandby() {
+                    loadingEl.classList.remove("active");
+                    loadingEl.classList.add("standby");
+                    document.getElementById("loading-text").textContent =
+                        "Transferring files, please wait...";
+                }
+
+                function exitStandby() {
+                    loadingEl.classList.remove("standby");
+                }
+
+                loadingEl.addEventListener("click", () => {
+                    if (loadingEl.classList.contains("standby")) {
+                        exitStandby();
+                        hideLoading();
+                        _imageImportExpected = false;
+                    }
+                });
+
+                imageLoaderInput.addEventListener("click", () => {
+                    _imageImportExpected = true;
+                    showLoading("Waiting for file selection...");
+                    const onFocus = () => {
+                        window.removeEventListener("focus", onFocus);
+                        if (_imageImportExpected) enterStandby();
+                    };
+                    window.addEventListener("focus", onFocus);
+                    imageLoaderInput._focusCleanup = () =>
+                        window.removeEventListener("focus", onFocus);
+                });
+
+                document
+                    .getElementById("image-loader")
+                    .addEventListener("change", async (e) => {
+                        if (imageLoaderInput._focusCleanup) {
+                            imageLoaderInput._focusCleanup();
+                            imageLoaderInput._focusCleanup = null;
+                        }
+                        _imageImportExpected = false;
+                        exitStandby();
+
+                        const files = Array.from(e.target.files);
+                        if (files.length === 0) {
+                            hideLoading();
+                            return;
+                        }
+
+                        showLoading(`Adding images... (0/${files.length})`);
+                        await new Promise((r) => requestAnimationFrame(r));
+
+                        const bank = document.getElementById("image-bank");
+                        let added = 0;
+
+                        for (const file of files) {
+                            const blobUrl = URL.createObjectURL(file);
+                            registerImage(blobUrl, file);
+                            bank.appendChild(
+                                createImageWrapperElement(blobUrl),
+                            );
+                            state.bank.push(blobUrl);
+                            added++;
+
+                            if (added % 10 === 0 || added === files.length) {
+                                showLoading(
+                                    `Adding images... (${added}/${files.length})`,
+                                );
+                                updateBankCount();
+                                await new Promise((r) =>
+                                    requestAnimationFrame(r),
+                                );
+                            }
+                        }
+
+                        markUnsaved();
+                        e.target.value = "";
+                        hideLoading();
+                    });
+
+                document
+                    .getElementById("add-url-btn")
+                    .addEventListener("click", () => {
+                        const url = prompt("Enter image URL:");
+                        if (url) {
+                            showLoading("Fetching target asset URL data...");
+                            const tempImg = new Image();
+                            tempImg.onload = () => {
+                                state.bank.push(url);
+                                renderBank();
+                                markUnsaved();
+                                hideLoading();
+                            };
+                            tempImg.onerror = () => {
+                                alert("Failed to resolve image data asset.");
+                                hideLoading();
+                            };
+                            tempImg.src = url;
+                        }
+                    });
+
+                document
+                    .getElementById("add-tier-btn")
+                    .addEventListener("click", () => {
+                        const newId = "t_" + Date.now();
+                        state.tiers.push({
+                            id: newId,
+                            name: "New Tier",
+                            color: "#a0a0a0",
+                            images: [],
+                        });
+                        renderBoard();
+                        markUnsaved();
+                    });
+
+                document
+                    .getElementById("export-json-btn")
+                    .addEventListener("click", async () => {
+                        showLoading("Preparing export...");
+                        await new Promise((r) => requestAnimationFrame(r));
+                        syncStateFromDOM();
+
+                        const blobKeys = Object.keys(imageRegistry).filter(
+                            (k) =>
+                                imageRegistry[k] &&
+                                imageRegistry[k].startsWith("blob:"),
+                        );
+                        const exportRegistry = { ...imageRegistry };
+                        const updatedDescriptions = {};
+
+                        if (blobKeys.length > 0) {
+                            showLoading(
+                                `Converting images for export... (0/${blobKeys.length})`,
+                            );
+                            await new Promise((r) => requestAnimationFrame(r));
+
+                            for (let i = 0; i < blobKeys.length; i++) {
+                                const key = blobKeys[i];
+                                const file = blobRegistry[key];
+                                if (file) {
+                                    const base64Data = await new Promise(
+                                        (res) => {
+                                            const reader = new FileReader();
+                                            reader.onload = (e) =>
+                                                res(e.target.result);
+                                            reader.onerror = () =>
+                                                res(imageRegistry[key]);
+                                            reader.readAsDataURL(file);
+                                        },
+                                    );
+                                    exportRegistry[key] = base64Data;
+                                }
+                                if (
+                                    (i + 1) % 5 === 0 ||
+                                    i === blobKeys.length - 1
+                                ) {
+                                    showLoading(
+                                        `Converting images for export... (${i + 1}/${blobKeys.length})`,
+                                    );
+                                    await new Promise((r) =>
+                                        requestAnimationFrame(r),
+                                    );
+                                }
+                            }
+                        }
+
+                        for (const currentKey in state.descriptions) {
+                            const matchingSrc = imageRegistry[currentKey];
+                            if (matchingSrc) {
+                                const portableDataStr =
+                                    exportRegistry[currentKey] || matchingSrc;
+                                const permanentExportKey =
+                                    generateStringHash(portableDataStr);
+                                updatedDescriptions[permanentExportKey] =
+                                    state.descriptions[currentKey];
+                            }
+                        }
+
+                        const updatedFileNames = {};
+                        for (const currentKey in state.fileNames || {}) {
+                            const matchingSrc = imageRegistry[currentKey];
+                            if (matchingSrc) {
+                                const portableDataStr =
+                                    exportRegistry[currentKey] || matchingSrc;
+                                const permanentExportKey =
+                                    generateStringHash(portableDataStr);
+                                updatedFileNames[permanentExportKey] =
+                                    state.fileNames[currentKey];
+                            }
+                        }
+
+                        const exportState = {
+                            ...state,
+                            tiers: state.tiers.map((t) => ({
+                                ...t,
+                                images: t.images.map((src) => {
+                                    if (src && src.startsWith("blob:")) {
+                                        const key = srcToKey.get(src);
+                                        return key ? exportRegistry[key] : src;
+                                    }
+                                    return src;
+                                }),
+                            })),
+                            bank: state.bank.map((src) => {
+                                if (src && src.startsWith("blob:")) {
+                                    const key = srcToKey.get(src);
+                                    return key ? exportRegistry[key] : src;
+                                }
+                                return src;
+                            }),
+                            descriptions: updatedDescriptions,
+                            fileNames: updatedFileNames,
+                        };
+
+                        showLoading("Opening save dialog...");
+                        let dataStr;
+                        try {
+                            dataStr =
+                                "data:text/json;charset=utf-8," +
+                                encodeURIComponent(JSON.stringify(exportState));
+                        } catch (err) {
+                            hideLoading();
+                            alert("Failed to serialize state to JSON.");
+                            return;
+                        }
+
+                        await new Promise((r) => setTimeout(r, 120));
+                        const downloadAnchor = document.createElement("a");
+                        downloadAnchor.setAttribute("href", dataStr);
+                        downloadAnchor.setAttribute(
+                            "download",
+                            "tier-list.json",
+                        );
+                        document.body.appendChild(downloadAnchor);
+                        downloadAnchor.click();
+                        downloadAnchor.remove();
+                        clearUnsaved();
+                        hideLoading();
+                        showToast(
+                            "File explorer opening — save your tier-list.json",
+                        );
+                    });
+
+                document
+                    .getElementById("import-json-btn")
+                    .addEventListener("click", () => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = ".json";
+                        input.onchange = (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+
+                            showLoading("Parsing layout document...");
+                            setTimeout(() => {
+                                const reader = new FileReader();
+                                reader.onload = (evt) => {
+                                    try {
+                                        const parsed = JSON.parse(
+                                            evt.target.result,
+                                        );
+                                        if (parsed.tiers && parsed.bank) {
+                                            state = parsed;
+                                            if (!state.descriptions)
+                                                state.descriptions = {};
+                                            if (!state.fileNames)
+                                                state.fileNames = {};
+                                            if (!state.settings)
+                                                state.settings = {
+                                                    aspectRatio: "square",
+                                                    layout: "bottom",
+                                                    indicatorStyle: "preview",
+                                                };
+                                            if (!state.settings.indicatorStyle)
+                                                state.settings.indicatorStyle =
+                                                    "preview";
+
+                                            const restoredTitle =
+                                                state.title ||
+                                                "Tier List Maker";
+                                            const titleEl =
+                                                document.getElementById(
+                                                    "page-title",
+                                                );
+                                            if (titleEl)
+                                                titleEl.innerText =
+                                                    restoredTitle;
+                                            document.title = restoredTitle;
+
+                                            for (const k of Object.keys(
+                                                imageRegistry,
+                                            )) {
+                                                const src = imageRegistry[k];
+                                                if (
+                                                    src &&
+                                                    src.startsWith("blob:")
+                                                )
+                                                    URL.revokeObjectURL(src);
+                                            }
+                                            for (const k in imageRegistry)
+                                                delete imageRegistry[k];
+                                            for (const k in blobRegistry)
+                                                delete blobRegistry[k];
+                                            srcToKey.clear();
+
+                                            applyLayoutMode(
+                                                state.settings.layout ||
+                                                    "bottom",
+                                            );
+                                            updateGlobalAspectClass();
+
+                                            state.tiers.forEach((t) =>
+                                                t.images.forEach((src) =>
+                                                    registerImage(src),
+                                                ),
+                                            );
+                                            state.bank.forEach((src) =>
+                                                registerImage(src),
+                                            );
+
+                                            renderBoard();
+                                            renderBank();
+                                            clearUnsaved();
+                                        } else {
+                                            alert(
+                                                "Invalid JSON format structure.",
+                                            );
+                                        }
+                                    } catch (err) {
+                                        alert(
+                                            "Error reading JSON file formatting.",
+                                        );
+                                    } finally {
+                                        hideLoading();
+                                    }
+                                };
+                                reader.readAsText(file);
+                            }, 100);
+                        };
+                        input.click();
+                    });
+
+                document
+                    .getElementById("modal-close-btn")
+                    .addEventListener("click", closeModal);
+                document
+                    .getElementById("modal-delete-btn")
+                    .addEventListener("click", () => {
+                        if (
+                            confirm(
+                                "Are you absolutely sure you want to delete this tier row? Images inside will return to your bank pool.",
+                            )
+                        ) {
+                            const tier = state.tiers.find(
+                                (t) => t.id === activeModalTierId,
+                            );
+                            if (tier) {
+                                state.bank.push(...tier.images);
+                                state.tiers = state.tiers.filter(
+                                    (t) => t.id !== activeModalTierId,
+                                );
+                                closeModal();
+                                renderBoard();
+                                renderBank();
+                                markUnsaved();
+                            }
+                        }
+                    });
+
+                document
+                    .getElementById("modal-item-save-btn")
+                    .addEventListener("click", () => {
+                        if (activeModalItemWrap) {
+                            const key = activeModalItemWrap.dataset.imgKey;
+                            const descText = document
+                                .getElementById("modal-item-desc")
+                                .value.trim();
+                            if (descText) {
+                                state.descriptions[key] = descText;
+                            } else {
+                                delete state.descriptions[key];
+                            }
+                            markUnsaved();
+                        }
+                        document
+                            .getElementById("item-modal")
+                            .classList.remove("active");
+                        activeModalItemWrap = null;
+                    });
+
+                document
+                    .getElementById("modal-item-delete-btn")
+                    .addEventListener("click", () => {
+                        if (activeModalItemWrap) {
+                            if (
+                                confirm(
+                                    "Are you sure you want to permanently delete this item asset element?",
+                                )
+                            ) {
+                                const key = activeModalItemWrap.dataset.imgKey;
+                                delete state.descriptions[key];
+                                unregisterImage(key);
+                                activeModalItemWrap.remove();
+                                hideZoomPortal();
+                                syncStateFromDOM();
+                                markUnsaved();
+                                document
+                                    .getElementById("item-modal")
+                                    .classList.remove("active");
+                                activeModalItemWrap = null;
+                            }
+                        }
+                    });
+
+                document
+                    .getElementById("modal-item-view-btn")
+                    .addEventListener("click", () => {
+                        if (activeModalItemWrap) {
+                            const img =
+                                activeModalItemWrap.querySelector(
+                                    ".tier-item-img",
+                                );
+                            if (img && img.src) {
+                                const newTab = window.open();
+                                if (newTab) {
+                                    newTab.document.write(
+                                        `<img src="${img.src}" style="max-width:100%; height:auto; display:block; margin:20px auto; background:#111; box-shadow:0 4px 10px rgba(0,0,0,0.5); border-radius:4px;" />`,
+                                    );
+                                    newTab.document.body.style.background =
+                                        "#1a1a1a";
+                                    newTab.document.title =
+                                        "View Tier List Asset Element";
+                                    newTab.document.close();
+                                } else {
+                                    alert("Popup blocked!");
+                                }
+                            }
+                        }
+                    });
+
+                document
+                    .getElementById("return-all-btn")
+                    .addEventListener("click", () => {
+                        const tieredCount = state.tiers.reduce(
+                            (sum, t) => sum + t.images.length,
+                            0,
+                        );
+                        if (tieredCount === 0) {
+                            showToast(
+                                "No images are currently placed in any tier.",
+                            );
+                            return;
+                        }
+                        if (
+                            !confirm(
+                                `Return all ${tieredCount} image(s) from tiers back to the bank?`,
+                            )
+                        )
+                            return;
+                        syncStateFromDOM();
+                        state.tiers.forEach((tier) => {
+                            state.bank.push(...tier.images);
+                            tier.images = [];
+                        });
+                        renderBoard();
+                        renderBank();
+                        markUnsaved();
+                        showToast(
+                            `${tieredCount} image(s) returned to the bank.`,
+                        );
+                    });
+            }
+
+            function openModal(tierId) {
+                activeModalTierId = tierId;
+                const tier = state.tiers.find((t) => t.id === tierId);
+                if (!tier) return;
+                document.getElementById("modal-tier-name").value = tier.name;
+                document.getElementById("modal-tier-color").value = tier.color;
+                document.getElementById("tier-modal").classList.add("active");
+            }
+
+            function closeModal() {
+                const tier = state.tiers.find(
+                    (t) => t.id === activeModalTierId,
+                );
+                if (tier) {
+                    tier.name =
+                        document.getElementById("modal-tier-name").value;
+                    tier.color =
+                        document.getElementById("modal-tier-color").value;
+                    renderBoard();
+                    markUnsaved();
+                }
+                document
+                    .getElementById("tier-modal")
+                    .classList.remove("active");
+                activeModalTierId = null;
+            }
+
+            function openItemModal(wrapperElement) {
+                activeModalItemWrap = wrapperElement;
+                const img = wrapperElement.querySelector(".tier-item-img");
+                const key = wrapperElement.dataset.imgKey;
+                const savedDesc = state.descriptions[key] || "";
+                document.getElementById("modal-item-preview").src = img.src;
+                document.getElementById("modal-item-desc").value = savedDesc;
+
+                const fileObj = blobRegistry[key];
+                const filenameEl = document.getElementById(
+                    "modal-item-filename",
+                );
+                const fname =
+                    (state.fileNames && state.fileNames[key]) ||
+                    (fileObj && fileObj.name) ||
+                    null;
+                if (fname) {
+                    filenameEl.textContent = fname;
+                    filenameEl.style.display = "block";
+                } else {
+                    filenameEl.style.display = "none";
+                }
+
+                document.getElementById("item-modal").classList.add("active");
+            }
+
+            function getImageRankingNumber(wrapperElement) {
+                let rank = 0;
+                // Count all images in tiers (top-down, left-to-right)
+                for (const row of document.querySelectorAll(".tier-row")) {
+                    for (const wrap of row.querySelectorAll(
+                        ".tier-item-wrap",
+                    )) {
+                        rank++;
+                        if (wrap === wrapperElement) return rank;
+                    }
+                }
+                // If not found in tiers, it's in the bank — return null
+                return null;
+            }
+
+            function showZoomPortal(imgElement, wrapperElement) {
+                if (SilverDraggedElement) return;
+                const portal = document.getElementById("global-zoom-portal");
+                const portalImg = document.getElementById("portal-img");
+                const portalText = document.getElementById("portal-text");
+                const portalRank = document.getElementById("portal-rank");
+                const portalFilename =
+                    document.getElementById("portal-filename");
+                const rect = imgElement.getBoundingClientRect();
+
+                portalImg.src = imgElement.src;
+                portal.style.width = `${rect.width}px`;
+                portal.style.height = `${rect.height}px`;
+                portal.style.left = `${rect.left}px`;
+                portal.style.top = `${rect.top}px`;
+                portal.style.display = "block";
+
+                const key = wrapperElement.dataset.imgKey;
+
+                // Rank number (only for items in tiers)
+                const rankNum = getImageRankingNumber(wrapperElement);
+                if (rankNum !== null) {
+                    portalRank.textContent = `#${rankNum}`;
+                    portalRank.style.display = "block";
+                } else {
+                    portalRank.style.display = "none";
+                }
+
+                // Filename
+                const fileObj = blobRegistry[key];
+                const fname =
+                    (state.fileNames && state.fileNames[key]) ||
+                    (fileObj && fileObj.name) ||
+                    null;
+                if (fname) {
+                    portalFilename.textContent = fname;
+                    portalFilename.style.display = "block";
+                } else {
+                    portalFilename.style.display = "none";
+                }
+
+                // Position filename/rank: if rank shown, filename goes higher
+                if (rankNum !== null && fname) {
+                    portalRank.style.bottom = "calc(100% + 2px)";
+                    portalFilename.style.bottom = "calc(100% + 16px)";
+                } else if (rankNum !== null) {
+                    portalRank.style.bottom = "calc(100% + 2px)";
+                } else if (fname) {
+                    portalFilename.style.bottom = "calc(100% + 2px)";
+                }
+
+                // Description (below image, with background box — unchanged)
+                const savedDesc = state.descriptions[key] || "";
+                if (savedDesc) {
+                    portalText.innerText = savedDesc;
+                    portalText.style.display = "block";
+                } else {
+                    portalText.style.display = "none";
+                }
+
+                requestAnimationFrame(() => {
+                    portal.style.opacity = "1";
+                });
+                imgElement.style.visibility = "hidden";
+            }
+
+            function hideZoomPortal() {
+                const portal = document.getElementById("global-zoom-portal");
+                portal.style.opacity = "0";
+                portal.style.display = "none";
+                document.querySelectorAll(".tier-item-img").forEach((img) => {
+                    img.style.visibility = "visible";
+                });
+            }
+
+            function renderBoard() {
+                const board = document.getElementById("tier-board");
+                board.innerHTML = "";
+                updateGlobalAspectClass();
+
+                state.tiers.forEach((tier, index) => {
+                    const row = document.createElement("div");
+                    row.className = "tier-row";
+                    row.dataset.id = tier.id;
+
+                    const handleCol = document.createElement("div");
+                    handleCol.className = "tier-handle";
+
+                    const upBtn = document.createElement("button");
+                    upBtn.className = "handle-btn";
+                    upBtn.innerHTML = "▲";
+                    upBtn.disabled = index === 0;
+                    upBtn.addEventListener("click", () =>
+                        moveTierOrder(index, -1),
+                    );
+
+                    const downBtn = document.createElement("button");
+                    downBtn.className = "handle-btn";
+                    downBtn.innerHTML = "▼";
+                    downBtn.disabled = index === state.tiers.length - 1;
+                    downBtn.addEventListener("click", () =>
+                        moveTierOrder(index, 1),
+                    );
+
+                    handleCol.appendChild(upBtn);
+                    handleCol.appendChild(downBtn);
+
+                    const label = document.createElement("div");
+                    label.className = "tier-label";
+                    label.style.backgroundColor = tier.color;
+                    label.addEventListener("click", () => openModal(tier.id));
+
+                    const nameDisplay = document.createElement("span");
+                    nameDisplay.innerText = tier.name;
+                    label.appendChild(nameDisplay);
+
+                    const itemsContainer = document.createElement("div");
+                    itemsContainer.className = "tier-items";
+                    setupDropContainer(itemsContainer);
+
+                    tier.images.forEach((src) => {
+                        itemsContainer.appendChild(
+                            createImageWrapperElement(src),
+                        );
+                    });
+
+                    row.appendChild(handleCol);
+                    row.appendChild(label);
+                    row.appendChild(itemsContainer);
+                    board.appendChild(row);
+                });
+            }
+
+            function updateBankCount() {
+                const bankCount = state.bank.length;
+                const tierCount = state.tiers.reduce(
+                    (sum, t) => sum + t.images.length,
+                    0,
+                );
+                const countEl = document.getElementById("bank-count");
+                if (countEl) {
+                    countEl.textContent = `(${bankCount} in bank, ${tierCount} in list)`;
+                }
+            }
+
+            function renderBank() {
+                const bank = document.getElementById("image-bank");
+                bank.innerHTML = "";
+                setupDropContainer(bank);
+                updateGlobalAspectClass();
+
+                state.bank.forEach((src) => {
+                    bank.appendChild(createImageWrapperElement(src));
+                });
+                updateBankCount();
+            }
+
+            function createImageWrapperElement(src) {
+                const key = registerImage(src);
+                const wrapper = document.createElement("div");
+                wrapper.className = "tier-item-wrap";
+                wrapper.dataset.imgKey = key;
+
+                if (state.descriptions && !state.descriptions[key]) {
+                    for (const oldKey in state.descriptions) {
+                        if (
+                            oldKey === src ||
+                            generateStringHash(oldKey) === key
+                        ) {
+                            state.descriptions[key] =
+                                state.descriptions[oldKey];
+                            delete state.descriptions[oldKey];
+                            break;
+                        }
+                    }
+                }
+
+                const trigger = document.createElement("div");
+                trigger.className = "hitbox-trigger";
+                trigger.draggable = true;
+
+                const img = document.createElement("img");
+                img.src = src;
+                img.className = "tier-item-img";
+
+                trigger.addEventListener("mouseenter", () =>
+                    showZoomPortal(img, wrapper),
+                );
+                trigger.addEventListener("mouseleave", hideZoomPortal);
+
+                trigger.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    hideZoomPortal();
+                    openItemModal(wrapper);
+                });
+
+                trigger.addEventListener("dragstart", (e) => {
+                    hideZoomPortal();
+                    SilverDraggedElement = trigger;
+
+                    if (
+                        e.dataTransfer &&
+                        typeof e.dataTransfer.setDragImage === "function"
+                    ) {
+                        const ghostData = createDragGhostCanvas(img);
+                        if (ghostData) {
+                            e.dataTransfer.setDragImage(
+                                ghostData.canvas,
+                                ghostData.offsetX,
+                                ghostData.offsetY,
+                            );
+                        }
+                    }
+
+                    img.style.opacity = "0.4";
+                    setTimeout(() => {
+                        _dragPlaceholder = document.createElement("div");
+                        _dragPlaceholder.className = "drag-placeholder";
+
+                        const placeholderImg = document.createElement("img");
+                        placeholderImg.src = src;
+                        _dragPlaceholder.appendChild(placeholderImg);
+
+                        updatePlaceholderStyle();
+
+                        wrapper.parentNode.insertBefore(
+                            _dragPlaceholder,
+                            wrapper,
+                        );
+                        wrapper.style.display = "none";
+                    }, 0);
+                });
+
+                trigger.addEventListener("dragend", () => {
+                    img.style.opacity = "1";
+                    img.style.visibility = "visible";
+                    wrapper.style.display = "";
+
+                    if (_dragPlaceholder && _dragPlaceholder.parentNode) {
+                        _dragPlaceholder.parentNode.insertBefore(
+                            wrapper,
+                            _dragPlaceholder,
+                        );
+                        _dragPlaceholder.remove();
+                    }
+                    _dragPlaceholder = null;
+                    SilverDraggedElement = null;
+                    _dragFramePending = false;
+
+                    syncStateFromDOM();
+                    markUnsaved();
+                });
+
+                wrapper.appendChild(trigger);
+                wrapper.appendChild(img);
+                return wrapper;
+            }
+
+            function updatePlaceholderStyle() {
+                if (!_dragPlaceholder) return;
+                if (state.settings.indicatorStyle === "bar") {
+                    _dragPlaceholder.classList.add("bar-style");
+                } else {
+                    _dragPlaceholder.classList.remove("bar-style");
+                }
+            }
+
+            function moveTierOrder(index, direction) {
+                syncStateFromDOM();
+                const targetIndex = index + direction;
+                if (targetIndex >= 0 && targetIndex < state.tiers.length) {
+                    const temp = state.tiers[index];
+                    state.tiers[index] = state.tiers[targetIndex];
+                    state.tiers[targetIndex] = temp;
+                    renderBoard();
+                    markUnsaved();
+                }
+            }
+
+            let _dragFramePending = false;
+            let _dragPlaceholder = null;
+
+            function setupDropContainer(container) {
+                container.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    if (!SilverDraggedElement || !_dragPlaceholder) return;
+                    if (_dragFramePending) return;
+                    _dragFramePending = true;
+
+                    requestAnimationFrame(() => {
+                        _dragFramePending = false;
+                        if (!SilverDraggedElement || !_dragPlaceholder) return;
+
+                        const result = getDragAfterElement(
+                            container,
+                            e.clientX,
+                            e.clientY,
+                        );
+
+                        if (result.insertBefore == null) {
+                            // Only append if placeholder isn't already the last child
+                            if (
+                                container.lastElementChild !== _dragPlaceholder
+                            ) {
+                                container.appendChild(_dragPlaceholder);
+                            }
+                        } else if (result.insertBefore !== _dragPlaceholder) {
+                            // Don't move if placeholder is already immediately before the target
+                            if (
+                                _dragPlaceholder.nextElementSibling !==
+                                result.insertBefore
+                            ) {
+                                container.insertBefore(
+                                    _dragPlaceholder,
+                                    result.insertBefore,
+                                );
+                            }
+                        }
+                    });
+                });
+            }
+
+            function getDragAfterElement(container, x, y) {
+                const allWraps = [
+                    ...container.querySelectorAll(".tier-item-wrap"),
+                ];
+                const items = allWraps.filter(
+                    (el) =>
+                        !el.classList.contains("drag-placeholder") &&
+                        el.querySelector(".hitbox-trigger") !==
+                            SilverDraggedElement,
+                );
+
+                if (items.length === 0) {
+                    return { insertBefore: null };
+                }
+
+                const ROW_TOLERANCE = 10;
+                const rows = [];
+                for (const el of items) {
+                    const box = el.getBoundingClientRect();
+                    let placed = false;
+                    for (const row of rows) {
+                        if (Math.abs(box.top - row.top) <= ROW_TOLERANCE) {
+                            row.elements.push({ el, box });
+                            if (box.bottom > row.bottom)
+                                row.bottom = box.bottom;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed)
+                        rows.push({
+                            top: box.top,
+                            bottom: box.bottom,
+                            elements: [{ el, box }],
+                        });
+                }
+                rows.sort((a, b) => a.top - b.top);
+
+                // Find which row the cursor is directly over
+                let targetRow = null;
+                for (const r of rows) {
+                    if (
+                        y >= r.top - ROW_TOLERANCE &&
+                        y <= r.bottom + ROW_TOLERANCE
+                    ) {
+                        targetRow = r;
+                        break;
+                    }
+                }
+
+                if (!targetRow) {
+                    // Cursor is in a gap or outside all rows.
+                    // Use the placeholder's current rendered position as a tiebreaker:
+                    // if the placeholder is already rendered below row[i]'s bottom,
+                    // don't snap back to row[i] — prefer the row below the gap.
+                    let phBottom = -Infinity;
+                    if (
+                        _dragPlaceholder &&
+                        _dragPlaceholder.parentNode === container
+                    ) {
+                        phBottom = _dragPlaceholder.getBoundingClientRect().top;
+                    }
+
+                    // Find the gap the cursor is in
+                    for (let ri = 0; ri < rows.length - 1; ri++) {
+                        const rA = rows[ri];
+                        const rB = rows[ri + 1];
+                        if (y > rA.bottom && y < rB.top) {
+                            // Cursor is between rA and rB.
+                            // If placeholder is already at or below rB's level, keep it there.
+                            if (phBottom >= rB.top - ROW_TOLERANCE) {
+                                targetRow = rB;
+                            } else {
+                                // Split the gap: lower half → rB, upper half → rA
+                                const mid = (rA.bottom + rB.top) / 2;
+                                targetRow = y >= mid ? rB : rA;
+                            }
+                            break;
+                        }
+                    }
+
+                    // Still no target: cursor is above all rows or below all rows
+                    if (!targetRow) {
+                        if (y < rows[0].top) {
+                            targetRow = rows[0];
+                        } else {
+                            // Below all rows — append at end
+                            return { insertBefore: null };
+                        }
+                    }
+                }
+
+                targetRow.elements.sort((a, b) => a.box.left - b.box.left);
+                const elems = targetRow.elements;
+                let hoveredIdx = elems.length - 1;
+                for (let i = 0; i < elems.length; i++) {
+                    if (x <= elems[i].box.right) {
+                        hoveredIdx = i;
+                        break;
+                    }
+                }
+
+                const { el, box } = elems[hoveredIdx];
+                const center = box.left + box.width / 2;
+
+                if (x < center) {
+                    return { insertBefore: el };
+                } else {
+                    if (hoveredIdx + 1 < elems.length) {
+                        return { insertBefore: elems[hoveredIdx + 1].el };
+                    } else {
+                        const currentRowIndex = rows.indexOf(targetRow);
+                        const nextRow = rows[currentRowIndex + 1];
+                        if (nextRow && nextRow.elements.length > 0) {
+                            nextRow.elements.sort(
+                                (a, b) => a.box.left - b.box.left,
+                            );
+                            return { insertBefore: nextRow.elements[0].el };
+                        }
+                        return { insertBefore: null };
+                    }
+                }
+            }
+
+            function syncStateFromDOM() {
+                document.querySelectorAll(".tier-row").forEach((row) => {
+                    const id = row.dataset.id;
+                    const targetTier = state.tiers.find((t) => t.id === id);
+                    if (targetTier) {
+                        targetTier.images = [
+                            ...row.querySelectorAll(".tier-item-wrap"),
+                        ]
+                            .map((wrap) => imageRegistry[wrap.dataset.imgKey])
+                            .filter(Boolean);
+                    }
+                });
+                state.bank = [
+                    ...document
+                        .getElementById("image-bank")
+                        .querySelectorAll(".tier-item-wrap"),
+                ]
+                    .map((wrap) => imageRegistry[wrap.dataset.imgKey])
+                    .filter(Boolean);
+                updateBankCount();
+            }
+        </script>
+    </body>
+</html>

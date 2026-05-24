@@ -1,13 +1,10 @@
-Current Version: 1.8
+Current Version: **1.8**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
 <img width="500" height="265" alt="t" src="https://github.com/user-attachments/assets/7f2dd005-6e54-46fe-aeb2-84ef17b26b3f" />
 
 This is a standalone HTML file you can open with your web browser, it lets you create [tier lists.](https://en.wikipedia.org/wiki/Tier_list)
-
-v1.0 was coded by [Google Gemini](https://gemini.google.com) 3.5 Flash, and it only took 2 iterations to make.
-Updates are coded by Google Gemini and [Claude](https://claude.com), then edited and tested by me.
 
 **Features**
 - Creatable, moveable, colorable, deletable tiers.
@@ -34,4 +31,7 @@ Updates are coded by Google Gemini and [Claude](https://claude.com), then edited
 If you want to use existing tier list images, there's an easy way to do so.
 In Firefox (or any Firefox fork), pressing Ctrl+I opens page info. While on a page with the images you want, you can go to the Media tab, sort by Type so you can see just 'Image' labeled media next to eachother, select the images you want and download them, then just add them into the tier list maker. Images from tier list sites often all share the same file path, making it easy to Shift+Click just what you want and not any extra stuff like GUI/page elements. **Make sure that while images are downloading, you leave the Page Info menu open,** otherwise it'll stop downloading if there's still more to download.
 
-This project is dedicated to the public domain [(CC0)](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to copy, modify, distribute, or do whatever you want with it.
+
+*Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited and tested by me.*
+
+*This project is dedicated to the public domain [(CC0)](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to copy, modify, distribute, or do whatever you want with it.*

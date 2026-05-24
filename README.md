@@ -14,6 +14,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Append descriptions to images to add any information you want.
 - Adjustable layout and settings to change the workflow to your liking.
 - Lightweight, bloat-free, fully offline and local.
+- And more!
 
 **How to Download**
 1. Download 'index.html' by either clicking it above in the file list and then clicking the download button, or by clicking the green 'Code' button, downloading the zip, and extracting it.

@@ -136,10 +136,9 @@
             }
             .tier-label span {
                 width: 100%;
-                display: -webkit-box;
-                -webkit-line-clamp: 4;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
+                display: block;
+                overflow-wrap: break-word;
+                word-break: break-word;
             }
 
             /* Image Grids */
@@ -223,16 +222,20 @@
 
             /* Dynamic Native Drag Placeholder Spot Maker */
             .drag-placeholder {
-                display: inline-block;
+                display: inline-grid;
+                grid-template-areas: "stack";
+                place-items: center;
                 opacity: 0.6;
                 pointer-events: none;
                 box-sizing: border-box;
-                border: 2px dashed #4af;
+                outline: 2px dashed #4af;
                 background: rgba(68, 170, 255, 0.1);
             }
             .drag-placeholder img {
+                grid-area: stack;
                 display: block;
                 opacity: 0.6;
+                pointer-events: none;
             }
             .drag-placeholder.bar-style {
                 width: 4px !important;
@@ -504,12 +507,12 @@
             >
                 📋 Paste Image (Ctrl+V)
             </button>
-            <button id="add-url-btn">Add Image URL</button>
-            <button id="add-tier-btn">Add New Tier</button>
+            <button id="add-url-btn">🔗 Add Image URL</button>
+            <button id="add-tier-btn">➕ Add New Tier</button>
             <button id="settings-open-btn">⚙ Layout & Settings</button>
-            <button id="export-json-btn">Export JSON</button>
-            <button id="import-json-btn">Import JSON</button>
-            <button id="export-image-btn">Export Image</button>
+            <button id="export-json-btn">💾 Export JSON</button>
+            <button id="import-json-btn">📂 Import JSON</button>
+            <button id="export-image-btn">🖼 Export Image</button>
             <button
                 id="compress-btn"
                 title="Re-encode all images as JPEG to reduce file size"
@@ -533,7 +536,7 @@
                         "
                     ></span>
                 </h3>
-                <div style="margin-bottom: 8px">
+                <div style="margin-bottom: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
                     <button
                         id="return-all-btn"
                         title="Move all images from tiers back to the bank"
@@ -544,6 +547,16 @@
                         "
                     >
                         ⮐ Return All to Bank
+                    </button>
+                    <button
+                        id="place-all-btn"
+                        title="Place all bank images into selected tier(s)"
+                        style="
+                            font-size: 0.85em;
+                            padding: 6px 10px;
+                        "
+                    >
+                        ⮑ Place All
                     </button>
                 </div>
                 <div
@@ -581,6 +594,36 @@
                 class="portal-tooltip"
                 style="display: none"
             ></div>
+        </div>
+
+        <!-- Import JSON Mode Modal -->
+        <div id="import-mode-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 320px">
+                <h3>📂 Import JSON</h3>
+                <p style="color: #aaa; font-size: 0.85em; margin: 0 0 12px">
+                    How would you like to import this JSON file?
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: #1a1a1a; padding: 10px; border-radius: 6px; border: 2px solid transparent;" id="import-mode-replace-label">
+                        <input type="radio" name="import-mode" value="replace" checked style="margin-top: 3px; flex-shrink: 0;" />
+                        <div>
+                            <div style="font-weight: bold;">Replace Current</div>
+                            <div style="font-size: 0.82em; color: #aaa; margin-top: 2px;">Replaces your entire tier list with the imported file.</div>
+                        </div>
+                    </label>
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: #1a1a1a; padding: 10px; border-radius: 6px; border: 2px solid transparent;" id="import-mode-add-label">
+                        <input type="radio" name="import-mode" value="add" style="margin-top: 3px; flex-shrink: 0;" />
+                        <div>
+                            <div style="font-weight: bold;">Add Images to Bank</div>
+                            <div style="font-size: 0.82em; color: #aaa; margin-top: 2px;">Keeps your current tiers & placements. Only adds the imported images into your bank.</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="modal-actions" style="margin-top: 14px;">
+                    <button id="import-mode-cancel-btn">Cancel</button>
+                    <button id="import-mode-confirm-btn" class="btn-info">Choose File</button>
+                </div>
+            </div>
         </div>
 
         <!-- Image Compression Modal -->
@@ -628,6 +671,9 @@
                         <option value="0.85">High (0.85) — good balance</option>
                         <option value="0.95">
                             Very High (0.95) — near-lossless
+                        </option>
+                        <option value="1.0">
+                            Maximum (1.0) — true lossless JPEG
                         </option>
                     </select>
                 </label>
@@ -768,6 +814,7 @@
                     <button id="modal-delete-btn" class="btn-danger">
                         Delete Tier
                     </button>
+                    <button id="modal-cancel-btn">Cancel</button>
                     <button id="modal-close-btn">Save & Close</button>
                 </div>
             </div>
@@ -778,11 +825,35 @@
             <div class="modal-content" style="width: 300px">
                 <h3>Export Tier List as Image</h3>
                 <label>
-                    Quality:
+                    Format:
+                    <select
+                        id="export-image-format"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="png" selected>PNG — lossless, larger file</option>
+                        <option value="jpeg">JPEG — smaller file, no transparency</option>
+                    </select>
+                </label>
+                <label id="export-jpeg-quality-wrap" style="margin-top: 10px; display: none;">
+                    JPEG Quality:
+                    <select
+                        id="export-image-jpeg-quality"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="0.5">Low (0.5) — noticeable loss</option>
+                        <option value="0.7">Medium (0.7) — recommended</option>
+                        <option value="0.85" selected>High (0.85) — good balance</option>
+                        <option value="0.95">Very High (0.95) — near-lossless</option>
+                        <option value="1.0">Maximum (1.0) — true lossless JPEG</option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px;">
+                    Resolution Scale:
                     <select
                         id="export-image-quality"
                         style="width: 100%; margin-top: 5px"
                     >
+                        <option value="1">Very Low (1x)</option>
                         <option value="1.5">Low (1.5x)</option>
                         <option value="3" selected>High (3x)</option>
                         <option value="6">Very High (6x)</option>
@@ -790,7 +861,7 @@
                         <option value="24">Insane (24x)</option>
                     </select>
                 </label>
-                <p style="color: #aaa; font-size: 0.85em; margin: 0">
+                <p style="color: #aaa; font-size: 0.85em; margin: 6px 0 0">
                     Resolution scales dynamically with the list size. High scale
                     factors require significant browser memory allocation.
                 </p>
@@ -799,6 +870,21 @@
                     <button id="export-image-confirm-btn" class="btn-info">
                         Download
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Place All Modal -->
+        <div id="place-all-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 320px">
+                <h3>⮑ Place All Bank Images</h3>
+                <p style="color: #aaa; font-size: 0.85em; margin: 0 0 12px">
+                    Select one or more tiers. If multiple are selected, bank images will be randomly distributed among them.
+                </p>
+                <div id="place-all-tier-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; background: #1a1a1a; padding: 8px; border-radius: 4px; border: 1px solid #444;"></div>
+                <div class="modal-actions" style="margin-top: 14px;">
+                    <button id="place-all-cancel-btn">Cancel</button>
+                    <button id="place-all-confirm-btn" class="btn-info">Place All</button>
                 </div>
             </div>
         </div>
@@ -844,6 +930,7 @@
                     >
                         View Image
                     </button>
+                    <button id="modal-item-cancel-btn">Cancel</button>
                     <button id="modal-item-save-btn">Save Changes</button>
                 </div>
             </div>
@@ -942,6 +1029,18 @@
             }
 
             document.addEventListener("DOMContentLoaded", () => {
+                // Reset browser-persisted form state before wiring up listeners
+                const defaultRadio = document.querySelector('input[name="import-mode"][value="replace"]');
+                if (defaultRadio) defaultRadio.checked = true;
+                const compressFormatEl = document.getElementById("compress-format");
+                if (compressFormatEl) compressFormatEl.value = "png";
+                const compressQualityWrap = document.getElementById("compress-quality-wrap");
+                if (compressQualityWrap) compressQualityWrap.style.display = "none";
+                const exportFormatEl = document.getElementById("export-image-format");
+                if (exportFormatEl) exportFormatEl.value = "png";
+                const exportJpegWrap = document.getElementById("export-jpeg-quality-wrap");
+                if (exportJpegWrap) exportJpegWrap.style.display = "none";
+
                 renderBoard();
                 renderBank();
                 setupEventListeners();
@@ -1097,7 +1196,7 @@
                 });
             }
 
-            function exportTierListImage(quality) {
+            function exportTierListImage(quality, format, jpegQuality) {
                 const board = document.getElementById("tier-board");
                 const rows = board.querySelectorAll(".tier-row");
                 if (rows.length === 0) {
@@ -1186,27 +1285,54 @@
                             ? span.innerText
                             : label.innerText;
                         ctx.fillStyle = "#000";
-                        ctx.font = `bold ${Math.round(lRect.height * 0.22)}px sans-serif`;
+                        const LABEL_FONT_SIZE = 16;
+                        ctx.font = `bold ${LABEL_FONT_SIZE}px sans-serif`;
                         ctx.textAlign = "center";
                         ctx.textBaseline = "middle";
                         const maxW = lRect.width - 12;
-                        const lineH = lRect.height * 0.24;
-                        const words = labelText.split(" ");
-                        let lines = [];
-                        let cur = "";
-                        for (const w of words) {
-                            const test = cur ? cur + " " + w : w;
-                            if (ctx.measureText(test).width > maxW && cur) {
-                                lines.push(cur);
-                                cur = w;
-                            } else {
-                                cur = test;
+                        const lineH = LABEL_FONT_SIZE * 1.25;
+
+                        // Word-wrap with character-level fallback for long single words
+                        function wrapText(text, maxWidth) {
+                            const words = text.split(" ");
+                            const result = [];
+                            let cur = "";
+                            for (const word of words) {
+                                // If this single word is too wide, break it char by char
+                                if (ctx.measureText(word).width > maxWidth) {
+                                    if (cur) { result.push(cur); cur = ""; }
+                                    let charLine = "";
+                                    for (const ch of word) {
+                                        if (ctx.measureText(charLine + ch).width > maxWidth && charLine) {
+                                            result.push(charLine);
+                                            charLine = ch;
+                                        } else {
+                                            charLine += ch;
+                                        }
+                                    }
+                                    cur = charLine;
+                                } else {
+                                    const test = cur ? cur + " " + word : word;
+                                    if (ctx.measureText(test).width > maxWidth && cur) {
+                                        result.push(cur);
+                                        cur = word;
+                                    } else {
+                                        cur = test;
+                                    }
+                                }
                             }
+                            if (cur) result.push(cur);
+                            return result;
                         }
-                        if (cur) lines.push(cur);
+
+                        const lines = wrapText(labelText, maxW);
                         const totalH = lines.length * lineH;
                         const startY =
                             ly + lRect.height / 2 - totalH / 2 + lineH / 2;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(lx, ly, lRect.width, lRect.height);
+                        ctx.clip();
                         lines.forEach((line, i) => {
                             ctx.fillText(
                                 line,
@@ -1214,6 +1340,7 @@
                                 startY + i * lineH,
                             );
                         });
+                        ctx.restore();
                     }
 
                     const imgs = row.querySelectorAll(".tier-item-img");
@@ -1266,8 +1393,11 @@
                 Promise.all(rowPromises).then(() => {
                     try {
                         const link = document.createElement("a");
-                        link.download = "tier-list.png";
-                        link.href = canvas.toDataURL("image/png");
+                        const useJpeg = format === "jpeg";
+                        link.download = useJpeg ? "tier-list.jpg" : "tier-list.png";
+                        link.href = useJpeg
+                            ? canvas.toDataURL("image/jpeg", jpegQuality)
+                            : canvas.toDataURL("image/png");
                         link.click();
                     } catch (err) {
                         alert(
@@ -1340,6 +1470,13 @@
                     });
 
                 document
+                    .getElementById("export-image-format")
+                    .addEventListener("change", function () {
+                        document.getElementById("export-jpeg-quality-wrap").style.display =
+                            this.value === "jpeg" ? "" : "none";
+                    });
+
+                document
                     .getElementById("export-image-cancel-btn")
                     .addEventListener("click", () => {
                         document
@@ -1350,15 +1487,15 @@
                 document
                     .getElementById("export-image-confirm-btn")
                     .addEventListener("click", () => {
-                        const quality = document.getElementById(
-                            "export-image-quality",
-                        ).value;
+                        const scale = document.getElementById("export-image-quality").value;
+                        const format = document.getElementById("export-image-format").value;
+                        const jpegQuality = parseFloat(document.getElementById("export-image-jpeg-quality").value);
                         document
                             .getElementById("export-image-modal")
                             .classList.remove("active");
                         showLoading("Rendering tier list image...");
                         setTimeout(() => {
-                            exportTierListImage(quality);
+                            exportTierListImage(scale, format, jpegQuality);
                         }, 80);
                     });
 
@@ -1714,6 +1851,34 @@
                 document
                     .getElementById("import-json-btn")
                     .addEventListener("click", () => {
+                        document.getElementById("import-mode-modal").classList.add("active");
+                    });
+
+                document
+                    .getElementById("import-mode-cancel-btn")
+                    .addEventListener("click", () => {
+                        document.getElementById("import-mode-modal").classList.remove("active");
+                    });
+
+                // Highlight selected radio label
+                function updateImportModeHighlight() {
+                    const val = document.querySelector('input[name="import-mode"]:checked')?.value;
+                    document.getElementById("import-mode-replace-label").style.border =
+                        val === "replace" ? "2px solid #4af" : "2px solid transparent";
+                    document.getElementById("import-mode-add-label").style.border =
+                        val === "add" ? "2px solid #4af" : "2px solid transparent";
+                }
+                document.querySelectorAll('input[name="import-mode"]').forEach((radio) => {
+                    radio.addEventListener("change", updateImportModeHighlight);
+                });
+                updateImportModeHighlight();
+
+                document
+                    .getElementById("import-mode-confirm-btn")
+                    .addEventListener("click", () => {
+                        const mode = document.querySelector('input[name="import-mode"]:checked').value;
+                        document.getElementById("import-mode-modal").classList.remove("active");
+
                         const input = document.createElement("input");
                         input.type = "file";
                         input.accept = ".json";
@@ -1726,15 +1891,52 @@
                                 const reader = new FileReader();
                                 reader.onload = (evt) => {
                                     try {
-                                        const parsed = JSON.parse(
-                                            evt.target.result,
-                                        );
-                                        if (parsed.tiers && parsed.bank) {
+                                        const parsed = JSON.parse(evt.target.result);
+                                        if (!parsed.tiers || !parsed.bank) {
+                                            alert("Invalid JSON format structure.");
+                                            hideLoading();
+                                            return;
+                                        }
+
+                                        if (mode === "add") {
+                                            // Add-to-bank mode: only import images into the bank
+                                            const importedImageData = parsed.imageData || {};
+                                            const importedFileNames = parsed.fileNames || {};
+                                            const importedDescriptions = parsed.descriptions || {};
+
+                                            // Collect all keys from bank + tiers in the imported JSON
+                                            const allImportedKeys = new Set([
+                                                ...parsed.bank,
+                                                ...parsed.tiers.flatMap((t) => t.images),
+                                            ]);
+
+                                            let added = 0;
+                                            for (const k of allImportedKeys) {
+                                                const src = importedImageData[k];
+                                                if (!src) continue;
+                                                // forceUnique=true so re-importing the same JSON always adds new copies
+                                                const newKey = registerImage(src, null, true);
+                                                if (!state.imageData) state.imageData = {};
+                                                state.imageData[newKey] = src;
+                                                if (importedFileNames[k]) {
+                                                    if (!state.fileNames) state.fileNames = {};
+                                                    state.fileNames[newKey] = importedFileNames[k];
+                                                }
+                                                if (importedDescriptions[k]) {
+                                                    state.descriptions[newKey] = importedDescriptions[k];
+                                                }
+                                                state.bank.push(newKey);
+                                                added++;
+                                            }
+                                            renderBank();
+                                            markUnsaved();
+                                            hideLoading();
+                                            showToast(`Added ${added} image(s) to the bank.`);
+                                        } else {
+                                            // Replace mode: existing behavior
                                             state = parsed;
-                                            if (!state.descriptions)
-                                                state.descriptions = {};
-                                            if (!state.fileNames)
-                                                state.fileNames = {};
+                                            if (!state.descriptions) state.descriptions = {};
+                                            if (!state.fileNames) state.fileNames = {};
                                             if (!state.settings)
                                                 state.settings = {
                                                     aspectRatio: "square",
@@ -1744,130 +1946,63 @@
                                                     showFilename: true,
                                                 };
                                             if (!state.settings.indicatorStyle)
-                                                state.settings.indicatorStyle =
-                                                    "preview";
-                                            if (
-                                                state.settings.showRank ===
-                                                undefined
-                                            )
+                                                state.settings.indicatorStyle = "preview";
+                                            if (state.settings.showRank === undefined)
                                                 state.settings.showRank = true;
-                                            if (
-                                                state.settings.showFilename ===
-                                                undefined
-                                            )
+                                            if (state.settings.showFilename === undefined)
                                                 state.settings.showFilename = true;
 
-                                            const restoredTitle =
-                                                state.title ||
-                                                "Tier List Maker";
-                                            const titleEl =
-                                                document.getElementById(
-                                                    "page-title",
-                                                );
-                                            if (titleEl)
-                                                titleEl.innerText =
-                                                    restoredTitle;
+                                            const restoredTitle = state.title || "Tier List Maker";
+                                            const titleEl = document.getElementById("page-title");
+                                            if (titleEl) titleEl.innerText = restoredTitle;
                                             document.title = restoredTitle;
 
-                                            for (const k of Object.keys(
-                                                imageRegistry,
-                                            )) {
+                                            for (const k of Object.keys(imageRegistry)) {
                                                 const src = imageRegistry[k];
-                                                if (
-                                                    src &&
-                                                    src.startsWith("blob:")
-                                                )
-                                                    URL.revokeObjectURL(src);
+                                                if (src && src.startsWith("blob:")) URL.revokeObjectURL(src);
                                             }
-                                            for (const k in imageRegistry)
-                                                delete imageRegistry[k];
-                                            for (const k in blobRegistry)
-                                                delete blobRegistry[k];
+                                            for (const k in imageRegistry) delete imageRegistry[k];
+                                            for (const k in blobRegistry) delete blobRegistry[k];
                                             srcToKey.clear();
 
-                                            if (!state.imageData)
-                                                state.imageData = {};
+                                            if (!state.imageData) state.imageData = {};
 
-                                            applyLayoutMode(
-                                                state.settings.layout ||
-                                                    "bottom",
-                                            );
+                                            applyLayoutMode(state.settings.layout || "bottom");
                                             updateGlobalAspectClass();
 
-                                            // Restore imageRegistry from imageData (key→src map)
-                                            // Also handle legacy format where tiers/bank stored raw src strings
-                                            const allKeys = new Set([
-                                                ...Object.keys(state.imageData),
-                                            ]);
-
-                                            // Legacy: if items look like data URLs or http URLs, register them
+                                            const allKeys = new Set([...Object.keys(state.imageData)]);
                                             const looksLikeSrc = (s) =>
-                                                s &&
-                                                (s.startsWith("data:") ||
-                                                    s.startsWith("http") ||
-                                                    s.startsWith("blob:"));
+                                                s && (s.startsWith("data:") || s.startsWith("http") || s.startsWith("blob:"));
                                             state.tiers.forEach((t) => {
-                                                t.images = t.images.map(
-                                                    (keyOrSrc) => {
-                                                        if (
-                                                            looksLikeSrc(
-                                                                keyOrSrc,
-                                                            )
-                                                        ) {
-                                                            const k =
-                                                                registerImage(
-                                                                    keyOrSrc,
-                                                                );
-                                                            state.imageData[k] =
-                                                                keyOrSrc;
-                                                            return k;
-                                                        }
-                                                        allKeys.add(keyOrSrc);
-                                                        return keyOrSrc;
-                                                    },
-                                                );
-                                            });
-                                            state.bank = state.bank.map(
-                                                (keyOrSrc) => {
-                                                    if (
-                                                        looksLikeSrc(keyOrSrc)
-                                                    ) {
-                                                        const k =
-                                                            registerImage(
-                                                                keyOrSrc,
-                                                            );
-                                                        state.imageData[k] =
-                                                            keyOrSrc;
+                                                t.images = t.images.map((keyOrSrc) => {
+                                                    if (looksLikeSrc(keyOrSrc)) {
+                                                        const k = registerImage(keyOrSrc);
+                                                        state.imageData[k] = keyOrSrc;
                                                         return k;
                                                     }
                                                     allKeys.add(keyOrSrc);
                                                     return keyOrSrc;
-                                                },
-                                            );
-
-                                            // Register all imageData entries into imageRegistry
-                                            for (const [
-                                                k,
-                                                src,
-                                            ] of Object.entries(
-                                                state.imageData,
-                                            )) {
+                                                });
+                                            });
+                                            state.bank = state.bank.map((keyOrSrc) => {
+                                                if (looksLikeSrc(keyOrSrc)) {
+                                                    const k = registerImage(keyOrSrc);
+                                                    state.imageData[k] = keyOrSrc;
+                                                    return k;
+                                                }
+                                                allKeys.add(keyOrSrc);
+                                                return keyOrSrc;
+                                            });
+                                            for (const [k, src] of Object.entries(state.imageData)) {
                                                 imageRegistry[k] = src;
                                             }
-
                                             renderBoard();
                                             renderBank();
                                             clearUnsaved();
-                                        } else {
-                                            alert(
-                                                "Invalid JSON format structure.",
-                                            );
+                                            hideLoading();
                                         }
                                     } catch (err) {
-                                        alert(
-                                            "Error reading JSON file formatting.",
-                                        );
-                                    } finally {
+                                        alert("Error reading JSON file formatting.");
                                         hideLoading();
                                     }
                                 };
@@ -1880,6 +2015,14 @@
                 document
                     .getElementById("modal-close-btn")
                     .addEventListener("click", closeModal);
+                document
+                    .getElementById("modal-cancel-btn")
+                    .addEventListener("click", () => {
+                        document
+                            .getElementById("tier-modal")
+                            .classList.remove("active");
+                        activeModalTierId = null;
+                    });
                 document
                     .getElementById("modal-delete-btn")
                     .addEventListener("click", () => {
@@ -1902,6 +2045,15 @@
                                 markUnsaved();
                             }
                         }
+                    });
+
+                document
+                    .getElementById("modal-item-cancel-btn")
+                    .addEventListener("click", () => {
+                        document
+                            .getElementById("item-modal")
+                            .classList.remove("active");
+                        activeModalItemWrap = null;
                     });
 
                 document
@@ -2005,6 +2157,79 @@
                         showToast(
                             `${tieredCount} image(s) returned to the bank.`,
                         );
+                    });
+
+                // --- Compress Images ---
+                document
+                    .getElementById("place-all-btn")
+                    .addEventListener("click", () => {
+                        syncStateFromDOM();
+                        if (state.bank.length === 0) {
+                            showToast("The bank is empty — nothing to place.");
+                            return;
+                        }
+                        if (state.tiers.length === 0) {
+                            showToast("No tiers exist to place images into.");
+                            return;
+                        }
+                        // Build tier checklist
+                        const listEl = document.getElementById("place-all-tier-list");
+                        listEl.innerHTML = "";
+                        state.tiers.forEach((tier) => {
+                            const label = document.createElement("label");
+                            label.style.cssText = "display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px; background:#2a2a2a;";
+                            const cb = document.createElement("input");
+                            cb.type = "checkbox";
+                            cb.value = tier.id;
+                            cb.style.flexShrink = "0";
+                            const swatch = document.createElement("span");
+                            swatch.style.cssText = `display:inline-block; width:14px; height:14px; border-radius:3px; background:${tier.color}; flex-shrink:0;`;
+                            const name = document.createElement("span");
+                            name.textContent = tier.name || "(Unnamed)";
+                            label.appendChild(cb);
+                            label.appendChild(swatch);
+                            label.appendChild(name);
+                            listEl.appendChild(label);
+                        });
+                        document.getElementById("place-all-modal").classList.add("active");
+                    });
+
+                document
+                    .getElementById("place-all-cancel-btn")
+                    .addEventListener("click", () => {
+                        document.getElementById("place-all-modal").classList.remove("active");
+                    });
+
+                document
+                    .getElementById("place-all-confirm-btn")
+                    .addEventListener("click", () => {
+                        const checked = [
+                            ...document.querySelectorAll("#place-all-tier-list input[type=checkbox]:checked"),
+                        ].map((cb) => cb.value);
+                        if (checked.length === 0) {
+                            showToast("Select at least one tier.");
+                            return;
+                        }
+                        document.getElementById("place-all-modal").classList.remove("active");
+                        syncStateFromDOM();
+                        const bankImages = [...state.bank];
+                        state.bank = [];
+                        if (checked.length === 1) {
+                            // All into the one selected tier
+                            const tier = state.tiers.find((t) => t.id === checked[0]);
+                            if (tier) tier.images.push(...bankImages);
+                        } else {
+                            // Randomly assign each image independently to one of the selected tiers
+                            bankImages.forEach((key) => {
+                                const tierId = checked[Math.floor(Math.random() * checked.length)];
+                                const tier = state.tiers.find((t) => t.id === tierId);
+                                if (tier) tier.images.push(key);
+                            });
+                        }
+                        renderBoard();
+                        renderBank();
+                        markUnsaved();
+                        showToast(`Placed ${bankImages.length} image(s) into ${checked.length} tier(s).`);
                     });
 
                 // --- Compress Images ---

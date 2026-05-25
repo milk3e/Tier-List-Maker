@@ -558,6 +558,16 @@
                     >
                         ⮑ Place All
                     </button>
+                    <button
+                        id="shuffle-bank-btn"
+                        title="Randomly reorder the images currently in the bank"
+                        style="
+                            font-size: 0.85em;
+                            padding: 6px 10px;
+                        "
+                    >
+                        🔀 Shuffle Bank
+                    </button>
                 </div>
                 <div
                     class="image-bank aspect-mode-inactive"
@@ -1034,17 +1044,30 @@
             // it never reaches a server and is wiped when the tab closes.
             const SETTINGS_STORAGE_KEY = "tierListMaker.settings";
 
+            // Reads a <select>'s current value by id, or null if it's missing.
+            function _selVal(id) {
+                const el = document.getElementById(id);
+                return el ? el.value : null;
+            }
+
             function persistSettings() {
                 try {
-                    const exportScaleEl =
-                        document.getElementById("export-image-quality");
                     const payload = {
                         aspectRatio: state.settings.aspectRatio,
                         layout: state.settings.layout,
                         indicatorStyle: state.settings.indicatorStyle,
                         showRank: state.settings.showRank,
                         showFilename: state.settings.showFilename,
-                        exportScale: exportScaleEl ? exportScaleEl.value : "3",
+                        // Export Image options
+                        exportScale: _selVal("export-image-quality") || "3",
+                        exportFormat: _selVal("export-image-format") || "png",
+                        exportJpegQuality:
+                            _selVal("export-image-jpeg-quality") || "0.85",
+                        // Compress Images options
+                        compressFormat: _selVal("compress-format") || "png",
+                        compressQuality: _selVal("compress-quality") || "0.7",
+                        compressMaxDim: _selVal("compress-maxdim") || "1024",
+                        compressScope: _selVal("compress-scope") || "all",
                     };
                     sessionStorage.setItem(
                         SETTINGS_STORAGE_KEY,
@@ -1080,15 +1103,50 @@
                 if (typeof saved.showFilename === "boolean")
                     state.settings.showFilename = saved.showFilename;
 
-                // The export resolution scale lives on the dropdown, not in state.
-                const exportScaleEl =
-                    document.getElementById("export-image-quality");
-                if (exportScaleEl && saved.exportScale != null) {
-                    const hasOption = [...exportScaleEl.options].some(
-                        (o) => o.value === String(saved.exportScale),
+                // Restore a <select> only if the saved value is one of its options.
+                const setSelectIfValid = (id, value) => {
+                    if (value == null) return;
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    const hasOption = [...el.options].some(
+                        (o) => o.value === String(value),
                     );
-                    if (hasOption)
-                        exportScaleEl.value = String(saved.exportScale);
+                    if (hasOption) el.value = String(value);
+                };
+
+                // Export Image options (the resolution scale lives only on the dropdown).
+                setSelectIfValid("export-image-quality", saved.exportScale);
+                setSelectIfValid("export-image-format", saved.exportFormat);
+                setSelectIfValid(
+                    "export-image-jpeg-quality",
+                    saved.exportJpegQuality,
+                );
+
+                // Compress Images options.
+                setSelectIfValid("compress-format", saved.compressFormat);
+                setSelectIfValid("compress-quality", saved.compressQuality);
+                setSelectIfValid("compress-maxdim", saved.compressMaxDim);
+                setSelectIfValid("compress-scope", saved.compressScope);
+
+                // Re-evaluate format-dependent quality fields so restored JPEG/PNG
+                // choices show the correct quality dropdowns.
+                const exportFmtEl =
+                    document.getElementById("export-image-format");
+                const exportJpegWrap = document.getElementById(
+                    "export-jpeg-quality-wrap",
+                );
+                if (exportFmtEl && exportJpegWrap) {
+                    exportJpegWrap.style.display =
+                        exportFmtEl.value === "jpeg" ? "" : "none";
+                }
+                const compressFmtEl =
+                    document.getElementById("compress-format");
+                const compressQualWrap = document.getElementById(
+                    "compress-quality-wrap",
+                );
+                if (compressFmtEl && compressQualWrap) {
+                    compressQualWrap.style.display =
+                        compressFmtEl.value === "png" ? "none" : "";
                 }
             }
 
@@ -1544,6 +1602,13 @@
                     .addEventListener("change", function () {
                         document.getElementById("export-jpeg-quality-wrap").style.display =
                             this.value === "jpeg" ? "" : "none";
+                        persistSettings();
+                    });
+
+                document
+                    .getElementById("export-image-jpeg-quality")
+                    .addEventListener("change", () => {
+                        persistSettings();
                     });
 
                 document
@@ -2236,6 +2301,46 @@
                         );
                     });
 
+                // --- Shuffle Bank ---
+                document
+                    .getElementById("shuffle-bank-btn")
+                    .addEventListener("click", () => {
+                        syncStateFromDOM();
+                        if (state.bank.length < 2) {
+                            showToast(
+                                "Need at least 2 images in the bank to shuffle.",
+                            );
+                            return;
+                        }
+
+                        const original = state.bank.slice();
+                        // Fisher-Yates shuffle. Retry a few times so the result
+                        // is actually different from the starting order.
+                        const shuffleOnce = (arr) => {
+                            for (let i = arr.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [arr[i], arr[j]] = [arr[j], arr[i]];
+                            }
+                            return arr;
+                        };
+                        let shuffled = shuffleOnce(original.slice());
+                        let attempts = 0;
+                        while (
+                            attempts < 8 &&
+                            shuffled.every((k, i) => k === original[i])
+                        ) {
+                            shuffled = shuffleOnce(original.slice());
+                            attempts++;
+                        }
+
+                        state.bank = shuffled;
+                        renderBank();
+                        markUnsaved();
+                        showToast(
+                            `Shuffled ${state.bank.length} bank image(s).`,
+                        );
+                    });
+
                 // --- Compress Images ---
                 document
                     .getElementById("place-all-btn")
@@ -2325,7 +2430,17 @@
                         document.getElementById(
                             "compress-quality-wrap",
                         ).style.display = this.value === "png" ? "none" : "";
+                        persistSettings();
                     });
+                ["compress-quality", "compress-maxdim", "compress-scope"].forEach(
+                    (id) => {
+                        const el = document.getElementById(id);
+                        if (el)
+                            el.addEventListener("change", () =>
+                                persistSettings(),
+                            );
+                    },
+                );
                 document
                     .getElementById("compress-cancel-btn")
                     .addEventListener("click", () => {

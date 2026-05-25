@@ -25,7 +25,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 **Useage Guide**
 - You can add a title to your tier list by clicking the "Tier List Maker" title to edit it.
 - Create tiers with the Add New Tier button, and edit them by clicking on their color/name. Move them with the arrows next to them.
-- Click the Browse button to import image files, or click Add Image URL to instead use the image url from an image online, or right click copy an image from a webpage then press Ctrl+V.
+- Click the Browse button to import image files, or click Add Image URL to instead use the image url from an image online, or right click copy an image from a webpage then press Ctrl+V, or drag and drop a file onto the page (if your browser supports it).
 - Drag and drop images from the Image Bank into the tier you want to put it in, and organize them within the tier by moving them next to eachother.
 - If you want to add a description to an image that shows when hovering over it, click on it to open its menu. You can also view the image in a seperate tab or delete the image within that menu using the corresponding buttons.
 - To save your tier list, click Export JSON, then when you want to load it, click Import JSON. Otherwise, the tier list is lost if you refresh or close the tab.

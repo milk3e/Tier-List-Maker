@@ -747,7 +747,7 @@
                         style="width: 100%; margin-top: 5px"
                     >
                         <option value="bottom">Bottom Workspace Bank</option>
-                        <option value="sidebar">
+                        <option value="sidebar" selected>
                             Right Sidebar Workspace Bank
                         </option>
                     </select>
@@ -940,7 +940,7 @@
             let state = {
                 settings: {
                     aspectRatio: "square",
-                    layout: "bottom",
+                    layout: "sidebar",
                     indicatorStyle: "preview",
                     showRank: true,
                     showFilename: true,
@@ -1028,6 +1028,71 @@
                 if (state.imageData) delete state.imageData[key];
             }
 
+            // --- Settings Persistence (sessionStorage) ---
+            // Persists ONLY UI preferences (not images/tiers/placements) so they
+            // survive a page refresh. sessionStorage is tab-scoped and ephemeral:
+            // it never reaches a server and is wiped when the tab closes.
+            const SETTINGS_STORAGE_KEY = "tierListMaker.settings";
+
+            function persistSettings() {
+                try {
+                    const exportScaleEl =
+                        document.getElementById("export-image-quality");
+                    const payload = {
+                        aspectRatio: state.settings.aspectRatio,
+                        layout: state.settings.layout,
+                        indicatorStyle: state.settings.indicatorStyle,
+                        showRank: state.settings.showRank,
+                        showFilename: state.settings.showFilename,
+                        exportScale: exportScaleEl ? exportScaleEl.value : "3",
+                    };
+                    sessionStorage.setItem(
+                        SETTINGS_STORAGE_KEY,
+                        JSON.stringify(payload),
+                    );
+                } catch (e) {
+                    /* sessionStorage may be unavailable (e.g. privacy mode); ignore */
+                }
+            }
+
+            function loadPersistedSettings() {
+                let saved = null;
+                try {
+                    const raw = sessionStorage.getItem(SETTINGS_STORAGE_KEY);
+                    if (raw) saved = JSON.parse(raw);
+                } catch (e) {
+                    saved = null;
+                }
+                if (!saved || typeof saved !== "object") return;
+
+                const validAspect = ["square", "aspect"];
+                const validLayout = ["bottom", "sidebar"];
+                const validIndicator = ["preview", "bar"];
+
+                if (validAspect.includes(saved.aspectRatio))
+                    state.settings.aspectRatio = saved.aspectRatio;
+                if (validLayout.includes(saved.layout))
+                    state.settings.layout = saved.layout;
+                if (validIndicator.includes(saved.indicatorStyle))
+                    state.settings.indicatorStyle = saved.indicatorStyle;
+                if (typeof saved.showRank === "boolean")
+                    state.settings.showRank = saved.showRank;
+                if (typeof saved.showFilename === "boolean")
+                    state.settings.showFilename = saved.showFilename;
+
+                // The export resolution scale lives on the dropdown, not in state.
+                const exportScaleEl =
+                    document.getElementById("export-image-quality");
+                if (exportScaleEl && saved.exportScale != null) {
+                    const hasOption = [...exportScaleEl.options].some(
+                        (o) => o.value === String(saved.exportScale),
+                    );
+                    if (hasOption)
+                        exportScaleEl.value = String(saved.exportScale);
+                }
+            }
+
+
             document.addEventListener("DOMContentLoaded", () => {
                 // Reset browser-persisted form state before wiring up listeners
                 const defaultRadio = document.querySelector('input[name="import-mode"][value="replace"]');
@@ -1041,10 +1106,14 @@
                 const exportJpegWrap = document.getElementById("export-jpeg-quality-wrap");
                 if (exportJpegWrap) exportJpegWrap.style.display = "none";
 
+                // Restore UI preferences saved earlier this session (survives refresh).
+                loadPersistedSettings();
+
                 renderBoard();
                 renderBank();
                 setupEventListeners();
                 applyLayoutMode(state.settings.layout);
+                updateGlobalAspectClass();
                 setupTitleEdit(document.getElementById("page-title"));
             });
 
@@ -1454,6 +1523,7 @@
 
                         applyLayoutMode(layoutVal);
                         updateGlobalAspectClass();
+                        persistSettings();
 
                         document
                             .getElementById("settings-modal")
@@ -1474,6 +1544,12 @@
                     .addEventListener("change", function () {
                         document.getElementById("export-jpeg-quality-wrap").style.display =
                             this.value === "jpeg" ? "" : "none";
+                    });
+
+                document
+                    .getElementById("export-image-quality")
+                    .addEventListener("change", () => {
+                        persistSettings();
                     });
 
                 document
@@ -1969,6 +2045,7 @@
 
                                             applyLayoutMode(state.settings.layout || "bottom");
                                             updateGlobalAspectClass();
+                                            persistSettings();
 
                                             const allKeys = new Set([...Object.keys(state.imageData)]);
                                             const looksLikeSrc = (s) =>

@@ -1,5 +1,4 @@
-Current Version: **1.9**
-- **Major issue currently**, if you have imported images into your tier list and then moved or deleted those images from their original file, the tier list will not save its image data when exporting. However, once you export once with the images in the right place, close the session, then import it, it'll be fine. This will be fixed.
+Current Version: **1.10**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
@@ -10,6 +9,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 **Features**
 - Creatable, moveable, colorable, deletable tiers.
 - Import images by file or by URL, move and sort within tiers, can crop into squares or keep aspect ratio, and can delete them.
+- Gif support.
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
 - Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.
@@ -25,7 +25,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 **Useage Guide**
 - You can add a title to your tier list by clicking the "Tier List Maker" title to edit it.
 - Create tiers with the Add New Tier button, and edit them by clicking on their color/name. Move them with the arrows next to them.
-- Click the Browse button to import image files, or click Add Image URL to instead use the image url from an image online.
+- Click the Browse button to import image files, or click Add Image URL to instead use the image url from an image online, or right click copy an image from a webpage then press Ctrl+V.
 - Drag and drop images from the Image Bank into the tier you want to put it in, and organize them within the tier by moving them next to eachother.
 - If you want to add a description to an image that shows when hovering over it, click on it to open its menu. You can also view the image in a seperate tab or delete the image within that menu using the corresponding buttons.
 - To save your tier list, click Export JSON, then when you want to load it, click Import JSON. Otherwise, the tier list is lost if you refresh or close the tab.

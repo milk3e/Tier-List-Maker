@@ -1,4 +1,4 @@
-Current Version: **2.1**
+Current Version: **2.2**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
@@ -14,6 +14,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.
 - Adjustable layout and settings to change the workflow to your liking.
+- Shuffle button to make the order you tier things in unique.
 - Lightweight, bloat-free, fully offline and local.
 - And more!
 

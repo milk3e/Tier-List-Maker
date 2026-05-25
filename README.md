@@ -35,7 +35,7 @@ If you want to use existing tier list images, there's an easy way to do so using
 
 If you don't want to use the extension and are on Firefox (or any Firefox fork), you can just press Ctrl+I to open page info. While on a page with the images you want, you can go to the Media tab, sort by Type so you can see just 'Image' labeled media next to eachother, select the images you want and download them, then just add them into the tier list maker. Images from tier list sites often all share the same file path, making it easy to Shift+Click just what you want and not any extra stuff like GUI/page elements. **Make sure that while images are downloading, you leave the Page Info menu open,** otherwise it'll stop downloading if there's still more to download.
 
-Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once (can be around ~1000 images at a time where it 'overloads'). A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
+Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once. A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
 
 If you are on a privacy-focused browser, you may have Canvas Data disabled, which can break certain features. A quick way in Firefox to enable it for that tab is to click the icon left of the URL (either looks like switches or like a picture), and enable it there.
 

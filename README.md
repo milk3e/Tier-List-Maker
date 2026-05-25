@@ -1,4 +1,4 @@
-Current Version: **1.10**
+Current Version: **2.0**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
@@ -14,6 +14,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.
 - Adjustable layout and settings to change the workflow to your liking.
+- Optional image compression.
 - Lightweight, bloat-free, fully offline and local.
 - And more!
 
@@ -29,6 +30,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - Drag and drop images from the Image Bank into the tier you want to put it in, and organize them within the tier by moving them next to eachother.
 - If you want to add a description to an image that shows when hovering over it, click on it to open its menu. You can also view the image in a seperate tab or delete the image within that menu using the corresponding buttons.
 - To save your tier list, click Export JSON, then when you want to load it, click Import JSON. Otherwise, the tier list is lost if you refresh or close the tab.
+- If you're using a lot of clipboard images, or have imported large images, file size can get quite large. Using the Compress Images button is good for keeping it fast and efficient when images get bloated. Use PNG if you want to keep transparency, make the max dimensions lower, or switch to JPEG to greatly reduce file size. GIFs are not effected.
 
 If you want to use existing tier list images, there's an easy way to do so using an extension I made, [Media Grabber](https://github.com/milk3e/Media-Grabber-Extension). Simply go to a tier list website (or any suitable website with images), click Media Grabber, change the shared folder path to the one that holds specifically tier list image items (ocassionally is split into 2 or more folder paths), then download it as a zip. Then you can just extract the zip holding the images, and dump those images into this tier list maker.
 

@@ -510,6 +510,12 @@
             <button id="export-json-btn">Export JSON</button>
             <button id="import-json-btn">Import JSON</button>
             <button id="export-image-btn">Export Image</button>
+            <button
+                id="compress-btn"
+                title="Re-encode all images as JPEG to reduce file size"
+            >
+                🗜 Compress Images
+            </button>
         </div>
 
         <div class="workspace-container" id="workspace">
@@ -575,6 +581,103 @@
                 class="portal-tooltip"
                 style="display: none"
             ></div>
+        </div>
+
+        <!-- Image Compression Modal -->
+        <div id="compress-modal" class="modal-overlay">
+            <div class="modal-content" style="width: 320px">
+                <h3>🗜 Compress Images</h3>
+                <p style="color: #aaa; font-size: 0.85em; margin: 0 0 12px">
+                    Re-encodes images using canvas. GIFs are always skipped.
+                    JPEG loses transparency; use PNG to preserve it (larger
+                    files).
+                </p>
+                <label>
+                    Format:
+                    <select
+                        id="compress-format"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="jpeg">
+                            JPEG — smaller, no transparency
+                        </option>
+                        <option value="png" selected>
+                            PNG — lossless, keeps transparency
+                        </option>
+                    </select>
+                </label>
+                <label
+                    style="margin-top: 10px; display: none"
+                    id="compress-quality-wrap"
+                >
+                    Quality (JPEG only):
+                    <select
+                        id="compress-quality"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="0.1">
+                            Deep Fried (0.1) — extreme artifact
+                        </option>
+                        <option value="0.25">
+                            Very Low (0.25) — heavy compression
+                        </option>
+                        <option value="0.5">Low (0.5) — noticeable loss</option>
+                        <option value="0.7" selected>
+                            Medium (0.7) — recommended
+                        </option>
+                        <option value="0.85">High (0.85) — good balance</option>
+                        <option value="0.95">
+                            Very High (0.95) — near-lossless
+                        </option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Max dimension (px):
+                    <select
+                        id="compress-maxdim"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="0">
+                            No limit — keep original resolution
+                        </option>
+                        <option value="64">64 px</option>
+                        <option value="128">128 px</option>
+                        <option value="256">256 px</option>
+                        <option value="512">512 px</option>
+                        <option value="1024" selected>1024 px</option>
+                        <option value="2048">2048 px</option>
+                    </select>
+                </label>
+                <div id="compress-scope-wrap" style="margin-top: 10px">
+                    <label>
+                        Apply to:
+                        <select
+                            id="compress-scope"
+                            style="width: 100%; margin-top: 5px"
+                        >
+                            <option value="all">
+                                All images (bank + tiers)
+                            </option>
+                            <option value="bank">Bank only</option>
+                        </select>
+                    </label>
+                </div>
+                <p
+                    id="compress-status"
+                    style="
+                        color: #aaa;
+                        font-size: 0.82em;
+                        margin: 10px 0 0;
+                        min-height: 1.2em;
+                    "
+                ></p>
+                <div class="modal-actions" style="margin-top: 10px">
+                    <button id="compress-cancel-btn">Cancel</button>
+                    <button id="compress-confirm-btn" class="btn-info">
+                        Compress
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Global Global Settings App Modular Window -->
@@ -649,6 +752,10 @@
         <div id="tier-modal" class="modal-overlay">
             <div class="modal-content">
                 <h3>Tier Settings</h3>
+                <p
+                    id="modal-tier-count"
+                    style="color: #aaa; font-size: 0.85em; margin: 0 0 10px"
+                ></p>
                 <label>
                     Label Text:
                     <input type="text" id="modal-tier-name" />
@@ -764,6 +871,7 @@
                 bank: [],
                 descriptions: {},
                 fileNames: {},
+                imageData: {},
             };
 
             let SilverDraggedElement = null;
@@ -774,6 +882,7 @@
             const imageRegistry = {};
             const blobRegistry = {};
             const srcToKey = new Map();
+            let _uniqueKeyCounter = 0;
 
             function generateStringHash(str) {
                 let hash = 0;
@@ -786,16 +895,31 @@
                 return "img_" + Math.abs(hash);
             }
 
-            function registerImage(src, file = null) {
-                if (srcToKey.has(src)) return srcToKey.get(src);
+            function generateUniqueKey(prefix) {
+                return (
+                    (prefix || "img") +
+                    "_" +
+                    Date.now() +
+                    "_" +
+                    ++_uniqueKeyCounter
+                );
+            }
+
+            // forceUnique: always allocate a new key even if src was seen before (clipboard pastes)
+            function registerImage(src, file = null, forceUnique = false) {
+                if (!forceUnique && srcToKey.has(src)) return srcToKey.get(src);
                 let key;
                 if (src.startsWith("blob:") && file) {
                     key = generateStringHash(file.name + "_" + file.size);
+                } else if (forceUnique) {
+                    key = generateUniqueKey("clip");
                 } else {
                     key = generateStringHash(src);
                 }
                 imageRegistry[key] = src;
-                srcToKey.set(src, key);
+                if (!state.imageData) state.imageData = {};
+                state.imageData[key] = src;
+                if (!forceUnique) srcToKey.set(src, key);
                 if (file) {
                     blobRegistry[key] = file;
                     if (file.name) {
@@ -814,6 +938,7 @@
                 }
                 delete imageRegistry[key];
                 delete blobRegistry[key];
+                if (state.imageData) delete state.imageData[key];
             }
 
             document.addEventListener("DOMContentLoaded", () => {
@@ -1337,8 +1462,10 @@
                             if (!state.fileNames) state.fileNames = {};
                             state.fileNames[key] = file.name;
 
-                            bank.appendChild(createImageWrapperElement(base64));
-                            state.bank.push(base64);
+                            bank.appendChild(
+                                createImageWrapperElement(base64, key),
+                            );
+                            state.bank.push(key);
                             added++;
 
                             if (added % 5 === 0 || added === files.length) {
@@ -1376,13 +1503,17 @@
                                 const reader = new FileReader();
                                 reader.onload = (ev) => {
                                     const base64 = ev.target.result;
-                                    const key = registerImage(base64);
+                                    const key = registerImage(
+                                        base64,
+                                        null,
+                                        true,
+                                    );
                                     const bank =
                                         document.getElementById("image-bank");
                                     bank.appendChild(
-                                        createImageWrapperElement(base64),
+                                        createImageWrapperElement(base64, key),
                                     );
-                                    state.bank.push(base64);
+                                    state.bank.push(key);
                                     updateBankCount();
                                     markUnsaved();
                                     showToast("Image pasted from clipboard.");
@@ -1417,13 +1548,13 @@
                             const reader = new FileReader();
                             reader.onload = (ev) => {
                                 const base64 = ev.target.result;
-                                registerImage(base64);
+                                const key = registerImage(base64, null, true);
                                 const bank =
                                     document.getElementById("image-bank");
                                 bank.appendChild(
-                                    createImageWrapperElement(base64),
+                                    createImageWrapperElement(base64, key),
                                 );
-                                state.bank.push(base64);
+                                state.bank.push(key);
                                 updateBankCount();
                                 markUnsaved();
                                 showToast("Image pasted from clipboard.");
@@ -1434,6 +1565,73 @@
                     }
                 });
 
+                // Fix 2: Window-level drag/drop for image files into the bank
+                const ALLOWED_DROP_TYPES = [
+                    "image/jpeg",
+                    "image/png",
+                    "image/gif",
+                    "image/webp",
+                    "image/bmp",
+                    "image/svg+xml",
+                    "image/tiff",
+                    "image/avif",
+                    "image/ico",
+                    "image/x-icon",
+                ];
+                document.addEventListener("dragover", (e) => {
+                    // Only intercept external file drags, not internal item drags
+                    if (
+                        !SilverDraggedElement &&
+                        e.dataTransfer &&
+                        e.dataTransfer.types.includes("Files")
+                    ) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "copy";
+                    }
+                });
+                document.addEventListener("drop", async (e) => {
+                    if (SilverDraggedElement) return; // internal drag — ignore
+                    const files = e.dataTransfer && e.dataTransfer.files;
+                    if (!files || files.length === 0) return;
+                    const imageFiles = Array.from(files).filter((f) =>
+                        ALLOWED_DROP_TYPES.includes(f.type),
+                    );
+                    if (imageFiles.length === 0) return;
+                    e.preventDefault();
+                    showLoading(`Reading images... (0/${imageFiles.length})`);
+                    await new Promise((r) => requestAnimationFrame(r));
+                    const bank = document.getElementById("image-bank");
+                    let added = 0;
+                    for (const file of imageFiles) {
+                        const base64 = await new Promise((res) => {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => res(ev.target.result);
+                            reader.onerror = () => res(null);
+                            reader.readAsDataURL(file);
+                        });
+                        if (!base64) continue;
+                        const key = registerImage(base64);
+                        if (!state.fileNames) state.fileNames = {};
+                        state.fileNames[key] = file.name;
+                        bank.appendChild(
+                            createImageWrapperElement(base64, key),
+                        );
+                        state.bank.push(key);
+                        added++;
+                        if (added % 5 === 0 || added === imageFiles.length) {
+                            showLoading(
+                                `Reading images... (${added}/${imageFiles.length})`,
+                            );
+                            updateBankCount();
+                            await new Promise((r) => requestAnimationFrame(r));
+                        }
+                    }
+                    markUnsaved();
+                    hideLoading();
+                    if (added > 0)
+                        showToast(`${added} image(s) added from drag & drop.`);
+                });
+
                 document
                     .getElementById("add-url-btn")
                     .addEventListener("click", () => {
@@ -1442,7 +1640,8 @@
                             showLoading("Fetching target asset URL data...");
                             const tempImg = new Image();
                             tempImg.onload = () => {
-                                state.bank.push(url);
+                                const key = registerImage(url);
+                                state.bank.push(key);
                                 renderBank();
                                 markUnsaved();
                                 hideLoading();
@@ -1586,20 +1785,75 @@
                                                 delete blobRegistry[k];
                                             srcToKey.clear();
 
+                                            if (!state.imageData)
+                                                state.imageData = {};
+
                                             applyLayoutMode(
                                                 state.settings.layout ||
                                                     "bottom",
                                             );
                                             updateGlobalAspectClass();
 
-                                            state.tiers.forEach((t) =>
-                                                t.images.forEach((src) =>
-                                                    registerImage(src),
-                                                ),
+                                            // Restore imageRegistry from imageData (key→src map)
+                                            // Also handle legacy format where tiers/bank stored raw src strings
+                                            const allKeys = new Set([
+                                                ...Object.keys(state.imageData),
+                                            ]);
+
+                                            // Legacy: if items look like data URLs or http URLs, register them
+                                            const looksLikeSrc = (s) =>
+                                                s &&
+                                                (s.startsWith("data:") ||
+                                                    s.startsWith("http") ||
+                                                    s.startsWith("blob:"));
+                                            state.tiers.forEach((t) => {
+                                                t.images = t.images.map(
+                                                    (keyOrSrc) => {
+                                                        if (
+                                                            looksLikeSrc(
+                                                                keyOrSrc,
+                                                            )
+                                                        ) {
+                                                            const k =
+                                                                registerImage(
+                                                                    keyOrSrc,
+                                                                );
+                                                            state.imageData[k] =
+                                                                keyOrSrc;
+                                                            return k;
+                                                        }
+                                                        allKeys.add(keyOrSrc);
+                                                        return keyOrSrc;
+                                                    },
+                                                );
+                                            });
+                                            state.bank = state.bank.map(
+                                                (keyOrSrc) => {
+                                                    if (
+                                                        looksLikeSrc(keyOrSrc)
+                                                    ) {
+                                                        const k =
+                                                            registerImage(
+                                                                keyOrSrc,
+                                                            );
+                                                        state.imageData[k] =
+                                                            keyOrSrc;
+                                                        return k;
+                                                    }
+                                                    allKeys.add(keyOrSrc);
+                                                    return keyOrSrc;
+                                                },
                                             );
-                                            state.bank.forEach((src) =>
-                                                registerImage(src),
-                                            );
+
+                                            // Register all imageData entries into imageRegistry
+                                            for (const [
+                                                k,
+                                                src,
+                                            ] of Object.entries(
+                                                state.imageData,
+                                            )) {
+                                                imageRegistry[k] = src;
+                                            }
 
                                             renderBoard();
                                             renderBank();
@@ -1752,6 +2006,183 @@
                             `${tieredCount} image(s) returned to the bank.`,
                         );
                     });
+
+                // --- Compress Images ---
+                document
+                    .getElementById("compress-btn")
+                    .addEventListener("click", () => {
+                        document.getElementById("compress-status").textContent =
+                            "";
+                        document
+                            .getElementById("compress-modal")
+                            .classList.add("active");
+                    });
+                document
+                    .getElementById("compress-format")
+                    .addEventListener("change", function () {
+                        document.getElementById(
+                            "compress-quality-wrap",
+                        ).style.display = this.value === "png" ? "none" : "";
+                    });
+                document
+                    .getElementById("compress-cancel-btn")
+                    .addEventListener("click", () => {
+                        document
+                            .getElementById("compress-modal")
+                            .classList.remove("active");
+                    });
+                document
+                    .getElementById("compress-confirm-btn")
+                    .addEventListener("click", async () => {
+                        const format =
+                            document.getElementById("compress-format").value;
+                        const quality = parseFloat(
+                            document.getElementById("compress-quality").value,
+                        );
+                        const maxDim = parseInt(
+                            document.getElementById("compress-maxdim").value,
+                            10,
+                        );
+                        const scope =
+                            document.getElementById("compress-scope").value;
+                        const statusEl =
+                            document.getElementById("compress-status");
+                        const mimeType =
+                            format === "png" ? "image/png" : "image/jpeg";
+
+                        document.getElementById(
+                            "compress-confirm-btn",
+                        ).disabled = true;
+                        statusEl.textContent = "Collecting images…";
+
+                        syncStateFromDOM();
+                        const bankKeys = [...state.bank];
+                        const tierKeys = state.tiers.flatMap((t) => t.images);
+                        const keys =
+                            scope === "bank"
+                                ? bankKeys
+                                : [...bankKeys, ...tierKeys];
+                        const unique = [...new Set(keys)];
+
+                        const toProcess = unique.filter((k) => {
+                            const src = imageRegistry[k];
+                            if (!src || !src.startsWith("data:")) return false;
+                            // Skip GIFs always
+                            if (src.startsWith("data:image/gif")) return false;
+                            return true;
+                        });
+
+                        if (toProcess.length === 0) {
+                            statusEl.textContent =
+                                "No compressible images found (GIFs skipped).";
+                            document.getElementById(
+                                "compress-confirm-btn",
+                            ).disabled = false;
+                            return;
+                        }
+
+                        let done = 0,
+                            saved = 0,
+                            skipped = 0;
+                        showLoading(`Compressing… (0/${toProcess.length})`);
+                        document
+                            .getElementById("compress-modal")
+                            .classList.remove("active");
+
+                        for (const key of toProcess) {
+                            const src = imageRegistry[key];
+                            const before = src.length;
+
+                            const compressed = await new Promise((resolve) => {
+                                const imgEl = new Image();
+                                imgEl.onload = () => {
+                                    let w = imgEl.naturalWidth;
+                                    let h = imgEl.naturalHeight;
+                                    if (maxDim > 0 && Math.max(w, h) > maxDim) {
+                                        const ratio = maxDim / Math.max(w, h);
+                                        w = Math.round(w * ratio);
+                                        h = Math.round(h * ratio);
+                                    }
+                                    const canvas =
+                                        document.createElement("canvas");
+                                    canvas.width = Math.max(1, w);
+                                    canvas.height = Math.max(1, h);
+                                    const ctx = canvas.getContext("2d");
+                                    if (format === "jpeg") {
+                                        // Fill white so transparent areas don't go black
+                                        ctx.fillStyle = "#ffffff";
+                                        ctx.fillRect(
+                                            0,
+                                            0,
+                                            canvas.width,
+                                            canvas.height,
+                                        );
+                                    }
+                                    ctx.drawImage(
+                                        imgEl,
+                                        0,
+                                        0,
+                                        canvas.width,
+                                        canvas.height,
+                                    );
+                                    const out =
+                                        format === "png"
+                                            ? canvas.toDataURL("image/png")
+                                            : canvas.toDataURL(
+                                                  "image/jpeg",
+                                                  quality,
+                                              );
+                                    resolve(out);
+                                };
+                                imgEl.onerror = () => resolve(null);
+                                imgEl.src = src;
+                            });
+
+                            if (!compressed) {
+                                done++;
+                                continue;
+                            }
+
+                            const after = compressed.length;
+                            if (after < before) {
+                                imageRegistry[key] = compressed;
+                                if (state.imageData)
+                                    state.imageData[key] = compressed;
+                                document
+                                    .querySelectorAll(
+                                        `.tier-item-wrap[data-img-key="${key}"] .tier-item-img`,
+                                    )
+                                    .forEach((el) => (el.src = compressed));
+                                saved += before - after;
+                            } else {
+                                skipped++;
+                            }
+
+                            done++;
+                            if (done % 5 === 0 || done === toProcess.length) {
+                                showLoading(
+                                    `Compressing… (${done}/${toProcess.length})`,
+                                );
+                                await new Promise((r) =>
+                                    requestAnimationFrame(r),
+                                );
+                            }
+                        }
+
+                        hideLoading();
+                        document.getElementById(
+                            "compress-confirm-btn",
+                        ).disabled = false;
+                        markUnsaved();
+                        const savedKB = (saved / 1024).toFixed(0);
+                        const skippedNote =
+                            skipped > 0
+                                ? ` (${skipped} already smaller, kept original)`
+                                : "";
+                        showToast(
+                            `Compressed ${done - skipped} image(s) — saved ~${savedKB} KB${skippedNote}.`,
+                        );
+                    });
             }
 
             function openModal(tierId) {
@@ -1760,6 +2191,18 @@
                 if (!tier) return;
                 document.getElementById("modal-tier-name").value = tier.name;
                 document.getElementById("modal-tier-color").value = tier.color;
+                // Count items currently in this tier from the DOM (most up-to-date)
+                const row = document.querySelector(
+                    `.tier-row[data-id="${tierId}"]`,
+                );
+                const count = row
+                    ? row.querySelectorAll(".tier-item-wrap").length
+                    : tier.images.length;
+                const countEl = document.getElementById("modal-tier-count");
+                countEl.textContent =
+                    count === 1
+                        ? "1 item in this tier"
+                        : `${count} items in this tier`;
                 document.getElementById("tier-modal").classList.add("active");
             }
 
@@ -1824,6 +2267,7 @@
 
             function showZoomPortal(imgElement, wrapperElement) {
                 if (SilverDraggedElement) return;
+                if (_isScrolling) return;
                 const portal = document.getElementById("global-zoom-portal");
                 const portalImg = document.getElementById("portal-img");
                 const portalText = document.getElementById("portal-text");
@@ -1901,6 +2345,52 @@
                 });
             }
 
+            // Fix 4: Suppress hover zoom while scrolling, re-trigger on scroll end
+            let _scrollSuppressTimer = null;
+            let _isScrolling = false;
+            let _hoveredTrigger = null;
+            let _hoveredImg = null;
+            let _hoveredWrapper = null;
+            window.addEventListener(
+                "scroll",
+                () => {
+                    if (!_isScrolling) {
+                        _isScrolling = true;
+                        hideZoomPortal();
+                    }
+                    clearTimeout(_scrollSuppressTimer);
+                    _scrollSuppressTimer = setTimeout(() => {
+                        _isScrolling = false;
+                        // Re-show zoom if cursor is still over a tracked element
+                        if (_hoveredTrigger && _hoveredImg && _hoveredWrapper) {
+                            const rect =
+                                _hoveredTrigger.getBoundingClientRect();
+                            // Use the last known mouse position (tracked globally)
+                            if (
+                                _lastMouseX >= rect.left &&
+                                _lastMouseX <= rect.right &&
+                                _lastMouseY >= rect.top &&
+                                _lastMouseY <= rect.bottom
+                            ) {
+                                showZoomPortal(_hoveredImg, _hoveredWrapper);
+                            }
+                        }
+                    }, 150);
+                },
+                { passive: true, capture: true },
+            );
+
+            let _lastMouseX = -1;
+            let _lastMouseY = -1;
+            document.addEventListener(
+                "mousemove",
+                (e) => {
+                    _lastMouseX = e.clientX;
+                    _lastMouseY = e.clientY;
+                },
+                { passive: true },
+            );
+
             function renderBoard() {
                 const board = document.getElementById("tier-board");
                 board.innerHTML = "";
@@ -1946,9 +2436,18 @@
                     itemsContainer.className = "tier-items";
                     setupDropContainer(itemsContainer);
 
-                    tier.images.forEach((src) => {
+                    tier.images.forEach((keyOrSrc) => {
+                        // Support both new key-based format and legacy src-based format
+                        let src, key;
+                        if (imageRegistry[keyOrSrc]) {
+                            key = keyOrSrc;
+                            src = imageRegistry[keyOrSrc];
+                        } else {
+                            src = keyOrSrc;
+                            key = registerImage(src);
+                        }
                         itemsContainer.appendChild(
-                            createImageWrapperElement(src),
+                            createImageWrapperElement(src, key),
                         );
                     });
 
@@ -1977,14 +2476,22 @@
                 setupDropContainer(bank);
                 updateGlobalAspectClass();
 
-                state.bank.forEach((src) => {
-                    bank.appendChild(createImageWrapperElement(src));
+                state.bank.forEach((keyOrSrc) => {
+                    let src, key;
+                    if (imageRegistry[keyOrSrc]) {
+                        key = keyOrSrc;
+                        src = imageRegistry[keyOrSrc];
+                    } else {
+                        src = keyOrSrc;
+                        key = registerImage(src);
+                    }
+                    bank.appendChild(createImageWrapperElement(src, key));
                 });
                 updateBankCount();
             }
 
-            function createImageWrapperElement(src) {
-                const key = registerImage(src);
+            function createImageWrapperElement(src, preRegisteredKey = null) {
+                const key = preRegisteredKey || registerImage(src);
                 const wrapper = document.createElement("div");
                 wrapper.className = "tier-item-wrap";
                 wrapper.dataset.imgKey = key;
@@ -2011,10 +2518,18 @@
                 img.src = src;
                 img.className = "tier-item-img";
 
-                trigger.addEventListener("mouseenter", () =>
-                    showZoomPortal(img, wrapper),
-                );
-                trigger.addEventListener("mouseleave", hideZoomPortal);
+                trigger.addEventListener("mouseenter", () => {
+                    _hoveredTrigger = trigger;
+                    _hoveredImg = img;
+                    _hoveredWrapper = wrapper;
+                    showZoomPortal(img, wrapper);
+                });
+                trigger.addEventListener("mouseleave", () => {
+                    _hoveredTrigger = null;
+                    _hoveredImg = null;
+                    _hoveredWrapper = null;
+                    hideZoomPortal();
+                });
 
                 trigger.addEventListener("click", (e) => {
                     e.stopPropagation();
@@ -2032,11 +2547,22 @@
                     ) {
                         const ghostData = createDragGhostCanvas(img);
                         if (ghostData) {
+                            // Chromium requires the canvas to be in the DOM at the
+                            // moment setDragImage is called; position it offscreen.
+                            ghostData.canvas.style.position = "fixed";
+                            ghostData.canvas.style.top = "-9999px";
+                            ghostData.canvas.style.left = "-9999px";
+                            ghostData.canvas.style.pointerEvents = "none";
+                            document.body.appendChild(ghostData.canvas);
                             e.dataTransfer.setDragImage(
                                 ghostData.canvas,
                                 ghostData.offsetX,
                                 ghostData.offsetY,
                             );
+                            // Remove after the browser has captured the ghost image
+                            requestAnimationFrame(() => {
+                                ghostData.canvas.remove();
+                            });
                         }
                     }
 
@@ -2280,8 +2806,8 @@
                         targetTier.images = [
                             ...row.querySelectorAll(".tier-item-wrap"),
                         ]
-                            .map((wrap) => imageRegistry[wrap.dataset.imgKey])
-                            .filter(Boolean);
+                            .map((wrap) => wrap.dataset.imgKey)
+                            .filter((k) => k && imageRegistry[k]);
                     }
                 });
                 state.bank = [
@@ -2289,8 +2815,8 @@
                         .getElementById("image-bank")
                         .querySelectorAll(".tier-item-wrap"),
                 ]
-                    .map((wrap) => imageRegistry[wrap.dataset.imgKey])
-                    .filter(Boolean);
+                    .map((wrap) => wrap.dataset.imgKey)
+                    .filter((k) => k && imageRegistry[k]);
                 updateBankCount();
             }
         </script>

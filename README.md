@@ -38,6 +38,8 @@ If you don't want to use the extension and are on Firefox (or any Firefox fork),
 
 Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once (can be around ~1000 images at a time where it 'overloads'). A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
 
+If you are on a privacy-focused browser, you may have Canvas Data disabled, which can break certain features. A quick way in Firefox to enable it for that tab is to click the icon left of the URL (either looks like switches or like a picture), and enable it there.
+
 
 *Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*
 

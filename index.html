@@ -498,7 +498,12 @@
 
         <div class="toolbar">
             <input type="file" id="image-loader" multiple accept="image/*" />
-            <button id="paste-clipboard-btn" title="Paste image from clipboard (Ctrl+V)">📋 Paste Image</button>
+            <button
+                id="paste-clipboard-btn"
+                title="Paste image from clipboard (Ctrl+V)"
+            >
+                📋 Paste Image (Ctrl+V)
+            </button>
             <button id="add-url-btn">Add Image URL</button>
             <button id="add-tier-btn">Add New Tier</button>
             <button id="settings-open-btn">⚙ Layout & Settings</button>
@@ -1162,8 +1167,9 @@
                         ).value = state.settings.indicatorStyle || "preview";
                         document.getElementById("settings-show-rank").value =
                             String(state.settings.showRank !== false);
-                        document.getElementById("settings-show-filename").value =
-                            String(state.settings.showFilename !== false);
+                        document.getElementById(
+                            "settings-show-filename",
+                        ).value = String(state.settings.showFilename !== false);
                         document
                             .getElementById("settings-modal")
                             .classList.add("active");
@@ -1185,9 +1191,11 @@
                         state.settings.aspectRatio = aspectVal;
                         state.settings.indicatorStyle = indicatorVal;
                         state.settings.showRank =
-                            document.getElementById("settings-show-rank").value === "true";
+                            document.getElementById("settings-show-rank")
+                                .value === "true";
                         state.settings.showFilename =
-                            document.getElementById("settings-show-filename").value === "true";
+                            document.getElementById("settings-show-filename")
+                                .value === "true";
 
                         applyLayoutMode(layoutVal);
                         updateGlobalAspectClass();
@@ -1276,14 +1284,22 @@
                         exitStandby();
 
                         const ALLOWED_TYPES = [
-                            "image/jpeg", "image/png", "image/gif",
-                            "image/webp", "image/bmp", "image/svg+xml",
-                            "image/tiff", "image/avif", "image/ico",
+                            "image/jpeg",
+                            "image/png",
+                            "image/gif",
+                            "image/webp",
+                            "image/bmp",
+                            "image/svg+xml",
+                            "image/tiff",
+                            "image/avif",
+                            "image/ico",
                             "image/x-icon",
                         ];
 
                         const allFiles = Array.from(e.target.files);
-                        const files = allFiles.filter((f) => ALLOWED_TYPES.includes(f.type));
+                        const files = allFiles.filter((f) =>
+                            ALLOWED_TYPES.includes(f.type),
+                        );
                         const rejected = allFiles.length - files.length;
 
                         if (allFiles.length === 0) {
@@ -1293,7 +1309,9 @@
 
                         if (rejected > 0 && files.length === 0) {
                             hideLoading();
-                            showToast(`${rejected} file(s) rejected — not valid image formats.`);
+                            showToast(
+                                `${rejected} file(s) rejected — not valid image formats.`,
+                            );
                             e.target.value = "";
                             return;
                         }
@@ -1324,14 +1342,20 @@
                             added++;
 
                             if (added % 5 === 0 || added === files.length) {
-                                showLoading(`Reading images... (${added}/${files.length})`);
+                                showLoading(
+                                    `Reading images... (${added}/${files.length})`,
+                                );
                                 updateBankCount();
-                                await new Promise((r) => requestAnimationFrame(r));
+                                await new Promise((r) =>
+                                    requestAnimationFrame(r),
+                                );
                             }
                         }
 
                         if (rejected > 0) {
-                            showToast(`${added} image(s) added. ${rejected} file(s) skipped (not valid image formats).`);
+                            showToast(
+                                `${added} image(s) added. ${rejected} file(s) skipped (not valid image formats).`,
+                            );
                         }
 
                         markUnsaved();
@@ -1344,15 +1368,20 @@
                         const items = await navigator.clipboard.read();
                         let found = false;
                         for (const item of items) {
-                            const imageType = item.types.find((t) => t.startsWith("image/"));
+                            const imageType = item.types.find((t) =>
+                                t.startsWith("image/"),
+                            );
                             if (imageType) {
                                 const blob = await item.getType(imageType);
                                 const reader = new FileReader();
                                 reader.onload = (ev) => {
                                     const base64 = ev.target.result;
                                     const key = registerImage(base64);
-                                    const bank = document.getElementById("image-bank");
-                                    bank.appendChild(createImageWrapperElement(base64));
+                                    const bank =
+                                        document.getElementById("image-bank");
+                                    bank.appendChild(
+                                        createImageWrapperElement(base64),
+                                    );
                                     state.bank.push(base64);
                                     updateBankCount();
                                     markUnsaved();
@@ -1365,7 +1394,9 @@
                         }
                         if (!found) showToast("No image found in clipboard.");
                     } catch (err) {
-                        showToast("Clipboard access denied or no image available.");
+                        showToast(
+                            "Clipboard access denied or no image available.",
+                        );
                     }
                 }
 
@@ -1387,8 +1418,11 @@
                             reader.onload = (ev) => {
                                 const base64 = ev.target.result;
                                 registerImage(base64);
-                                const bank = document.getElementById("image-bank");
-                                bank.appendChild(createImageWrapperElement(base64));
+                                const bank =
+                                    document.getElementById("image-bank");
+                                bank.appendChild(
+                                    createImageWrapperElement(base64),
+                                );
                                 state.bank.push(base64);
                                 updateBankCount();
                                 markUnsaved();
@@ -1513,9 +1547,15 @@
                                             if (!state.settings.indicatorStyle)
                                                 state.settings.indicatorStyle =
                                                     "preview";
-                                            if (state.settings.showRank === undefined)
+                                            if (
+                                                state.settings.showRank ===
+                                                undefined
+                                            )
                                                 state.settings.showRank = true;
-                                            if (state.settings.showFilename === undefined)
+                                            if (
+                                                state.settings.showFilename ===
+                                                undefined
+                                            )
                                                 state.settings.showFilename = true;
 
                                             const restoredTitle =
@@ -1824,8 +1864,10 @@
                 }
 
                 // Position filename/rank: if rank shown, filename goes higher
-                const showingRank = rankNum !== null && state.settings.showRank !== false;
-                const showingFilename = fname && state.settings.showFilename !== false;
+                const showingRank =
+                    rankNum !== null && state.settings.showRank !== false;
+                const showingFilename =
+                    fname && state.settings.showFilename !== false;
                 if (showingRank && showingFilename) {
                     portalRank.style.bottom = "calc(100% + 2px)";
                     portalFilename.style.bottom = "calc(100% + 16px)";

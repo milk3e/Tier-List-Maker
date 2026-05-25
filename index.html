@@ -498,6 +498,7 @@
 
         <div class="toolbar">
             <input type="file" id="image-loader" multiple accept="image/*" />
+            <button id="paste-clipboard-btn" title="Paste image from clipboard (Ctrl+V)">📋 Paste Image</button>
             <button id="add-url-btn">Add Image URL</button>
             <button id="add-tier-btn">Add New Tier</button>
             <button id="settings-open-btn">⚙ Layout & Settings</button>
@@ -607,6 +608,26 @@
                             Semi-Transparent Image Preview
                         </option>
                         <option value="bar">Blue Bar</option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Hover: Show Rank Number:
+                    <select
+                        id="settings-show-rank"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                    </select>
+                </label>
+                <label style="margin-top: 10px">
+                    Hover: Show Filename:
+                    <select
+                        id="settings-show-filename"
+                        style="width: 100%; margin-top: 5px"
+                    >
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
                     </select>
                 </label>
                 <div
@@ -722,6 +743,8 @@
                     aspectRatio: "square",
                     layout: "bottom",
                     indicatorStyle: "preview",
+                    showRank: true,
+                    showFilename: true,
                 },
                 title: "Tier List Maker",
                 tiers: [
@@ -1137,6 +1160,10 @@
                         document.getElementById(
                             "settings-indicator-style",
                         ).value = state.settings.indicatorStyle || "preview";
+                        document.getElementById("settings-show-rank").value =
+                            String(state.settings.showRank !== false);
+                        document.getElementById("settings-show-filename").value =
+                            String(state.settings.showFilename !== false);
                         document
                             .getElementById("settings-modal")
                             .classList.add("active");
@@ -1157,6 +1184,10 @@
 
                         state.settings.aspectRatio = aspectVal;
                         state.settings.indicatorStyle = indicatorVal;
+                        state.settings.showRank =
+                            document.getElementById("settings-show-rank").value === "true";
+                        state.settings.showFilename =
+                            document.getElementById("settings-show-filename").value === "true";
 
                         applyLayoutMode(layoutVal);
                         updateGlobalAspectClass();
@@ -1244,42 +1275,130 @@
                         _imageImportExpected = false;
                         exitStandby();
 
-                        const files = Array.from(e.target.files);
-                        if (files.length === 0) {
+                        const ALLOWED_TYPES = [
+                            "image/jpeg", "image/png", "image/gif",
+                            "image/webp", "image/bmp", "image/svg+xml",
+                            "image/tiff", "image/avif", "image/ico",
+                            "image/x-icon",
+                        ];
+
+                        const allFiles = Array.from(e.target.files);
+                        const files = allFiles.filter((f) => ALLOWED_TYPES.includes(f.type));
+                        const rejected = allFiles.length - files.length;
+
+                        if (allFiles.length === 0) {
                             hideLoading();
                             return;
                         }
 
-                        showLoading(`Adding images... (0/${files.length})`);
+                        if (rejected > 0 && files.length === 0) {
+                            hideLoading();
+                            showToast(`${rejected} file(s) rejected — not valid image formats.`);
+                            e.target.value = "";
+                            return;
+                        }
+
+                        showLoading(`Reading images... (0/${files.length})`);
                         await new Promise((r) => requestAnimationFrame(r));
 
                         const bank = document.getElementById("image-bank");
                         let added = 0;
 
                         for (const file of files) {
-                            const blobUrl = URL.createObjectURL(file);
-                            registerImage(blobUrl, file);
-                            bank.appendChild(
-                                createImageWrapperElement(blobUrl),
-                            );
-                            state.bank.push(blobUrl);
+                            // Read as base64 immediately so the image is self-contained
+                            const base64 = await new Promise((res) => {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => res(ev.target.result);
+                                reader.onerror = () => res(null);
+                                reader.readAsDataURL(file);
+                            });
+                            if (!base64) continue;
+
+                            // Store original filename before registering
+                            const key = registerImage(base64);
+                            if (!state.fileNames) state.fileNames = {};
+                            state.fileNames[key] = file.name;
+
+                            bank.appendChild(createImageWrapperElement(base64));
+                            state.bank.push(base64);
                             added++;
 
-                            if (added % 10 === 0 || added === files.length) {
-                                showLoading(
-                                    `Adding images... (${added}/${files.length})`,
-                                );
+                            if (added % 5 === 0 || added === files.length) {
+                                showLoading(`Reading images... (${added}/${files.length})`);
                                 updateBankCount();
-                                await new Promise((r) =>
-                                    requestAnimationFrame(r),
-                                );
+                                await new Promise((r) => requestAnimationFrame(r));
                             }
+                        }
+
+                        if (rejected > 0) {
+                            showToast(`${added} image(s) added. ${rejected} file(s) skipped (not valid image formats).`);
                         }
 
                         markUnsaved();
                         e.target.value = "";
                         hideLoading();
                     });
+
+                async function pasteImageFromClipboard() {
+                    try {
+                        const items = await navigator.clipboard.read();
+                        let found = false;
+                        for (const item of items) {
+                            const imageType = item.types.find((t) => t.startsWith("image/"));
+                            if (imageType) {
+                                const blob = await item.getType(imageType);
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                    const base64 = ev.target.result;
+                                    const key = registerImage(base64);
+                                    const bank = document.getElementById("image-bank");
+                                    bank.appendChild(createImageWrapperElement(base64));
+                                    state.bank.push(base64);
+                                    updateBankCount();
+                                    markUnsaved();
+                                    showToast("Image pasted from clipboard.");
+                                };
+                                reader.readAsDataURL(blob);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) showToast("No image found in clipboard.");
+                    } catch (err) {
+                        showToast("Clipboard access denied or no image available.");
+                    }
+                }
+
+                document
+                    .getElementById("paste-clipboard-btn")
+                    .addEventListener("click", pasteImageFromClipboard);
+
+                document.addEventListener("paste", (e) => {
+                    // Don't intercept paste in text inputs/textareas/modals
+                    const tag = document.activeElement.tagName.toLowerCase();
+                    if (tag === "input" || tag === "textarea") return;
+                    const items = e.clipboardData && e.clipboardData.items;
+                    if (!items) return;
+                    for (const item of items) {
+                        if (item.type.startsWith("image/")) {
+                            const blob = item.getAsFile();
+                            if (!blob) continue;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                                const base64 = ev.target.result;
+                                registerImage(base64);
+                                const bank = document.getElementById("image-bank");
+                                bank.appendChild(createImageWrapperElement(base64));
+                                state.bank.push(base64);
+                                updateBankCount();
+                                markUnsaved();
+                                showToast("Image pasted from clipboard.");
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
+                    }
+                });
 
                 document
                     .getElementById("add-url-btn")
@@ -1323,96 +1442,11 @@
                         await new Promise((r) => requestAnimationFrame(r));
                         syncStateFromDOM();
 
-                        const blobKeys = Object.keys(imageRegistry).filter(
-                            (k) =>
-                                imageRegistry[k] &&
-                                imageRegistry[k].startsWith("blob:"),
-                        );
-                        const exportRegistry = { ...imageRegistry };
-                        const updatedDescriptions = {};
-
-                        if (blobKeys.length > 0) {
-                            showLoading(
-                                `Converting images for export... (0/${blobKeys.length})`,
-                            );
-                            await new Promise((r) => requestAnimationFrame(r));
-
-                            for (let i = 0; i < blobKeys.length; i++) {
-                                const key = blobKeys[i];
-                                const file = blobRegistry[key];
-                                if (file) {
-                                    const base64Data = await new Promise(
-                                        (res) => {
-                                            const reader = new FileReader();
-                                            reader.onload = (e) =>
-                                                res(e.target.result);
-                                            reader.onerror = () =>
-                                                res(imageRegistry[key]);
-                                            reader.readAsDataURL(file);
-                                        },
-                                    );
-                                    exportRegistry[key] = base64Data;
-                                }
-                                if (
-                                    (i + 1) % 5 === 0 ||
-                                    i === blobKeys.length - 1
-                                ) {
-                                    showLoading(
-                                        `Converting images for export... (${i + 1}/${blobKeys.length})`,
-                                    );
-                                    await new Promise((r) =>
-                                        requestAnimationFrame(r),
-                                    );
-                                }
-                            }
-                        }
-
-                        for (const currentKey in state.descriptions) {
-                            const matchingSrc = imageRegistry[currentKey];
-                            if (matchingSrc) {
-                                const portableDataStr =
-                                    exportRegistry[currentKey] || matchingSrc;
-                                const permanentExportKey =
-                                    generateStringHash(portableDataStr);
-                                updatedDescriptions[permanentExportKey] =
-                                    state.descriptions[currentKey];
-                            }
-                        }
-
-                        const updatedFileNames = {};
-                        for (const currentKey in state.fileNames || {}) {
-                            const matchingSrc = imageRegistry[currentKey];
-                            if (matchingSrc) {
-                                const portableDataStr =
-                                    exportRegistry[currentKey] || matchingSrc;
-                                const permanentExportKey =
-                                    generateStringHash(portableDataStr);
-                                updatedFileNames[permanentExportKey] =
-                                    state.fileNames[currentKey];
-                            }
-                        }
-
+                        // Images are stored as base64 on import, so export is straightforward
                         const exportState = {
                             ...state,
-                            tiers: state.tiers.map((t) => ({
-                                ...t,
-                                images: t.images.map((src) => {
-                                    if (src && src.startsWith("blob:")) {
-                                        const key = srcToKey.get(src);
-                                        return key ? exportRegistry[key] : src;
-                                    }
-                                    return src;
-                                }),
-                            })),
-                            bank: state.bank.map((src) => {
-                                if (src && src.startsWith("blob:")) {
-                                    const key = srcToKey.get(src);
-                                    return key ? exportRegistry[key] : src;
-                                }
-                                return src;
-                            }),
-                            descriptions: updatedDescriptions,
-                            fileNames: updatedFileNames,
+                            descriptions: { ...state.descriptions },
+                            fileNames: { ...(state.fileNames || {}) },
                         };
 
                         showLoading("Opening save dialog...");
@@ -1473,10 +1507,16 @@
                                                     aspectRatio: "square",
                                                     layout: "bottom",
                                                     indicatorStyle: "preview",
+                                                    showRank: true,
+                                                    showFilename: true,
                                                 };
                                             if (!state.settings.indicatorStyle)
                                                 state.settings.indicatorStyle =
                                                     "preview";
+                                            if (state.settings.showRank === undefined)
+                                                state.settings.showRank = true;
+                                            if (state.settings.showFilename === undefined)
+                                                state.settings.showFilename = true;
 
                                             const restoredTitle =
                                                 state.title ||
@@ -1761,22 +1801,22 @@
 
                 const key = wrapperElement.dataset.imgKey;
 
-                // Rank number (only for items in tiers)
+                // Rank number (only for items in tiers, and only if enabled)
                 const rankNum = getImageRankingNumber(wrapperElement);
-                if (rankNum !== null) {
+                if (rankNum !== null && state.settings.showRank !== false) {
                     portalRank.textContent = `#${rankNum}`;
                     portalRank.style.display = "block";
                 } else {
                     portalRank.style.display = "none";
                 }
 
-                // Filename
+                // Filename (only if enabled)
                 const fileObj = blobRegistry[key];
                 const fname =
                     (state.fileNames && state.fileNames[key]) ||
                     (fileObj && fileObj.name) ||
                     null;
-                if (fname) {
+                if (fname && state.settings.showFilename !== false) {
                     portalFilename.textContent = fname;
                     portalFilename.style.display = "block";
                 } else {
@@ -1784,12 +1824,14 @@
                 }
 
                 // Position filename/rank: if rank shown, filename goes higher
-                if (rankNum !== null && fname) {
+                const showingRank = rankNum !== null && state.settings.showRank !== false;
+                const showingFilename = fname && state.settings.showFilename !== false;
+                if (showingRank && showingFilename) {
                     portalRank.style.bottom = "calc(100% + 2px)";
                     portalFilename.style.bottom = "calc(100% + 16px)";
-                } else if (rankNum !== null) {
+                } else if (showingRank) {
                     portalRank.style.bottom = "calc(100% + 2px)";
-                } else if (fname) {
+                } else if (showingFilename) {
                     portalFilename.style.bottom = "calc(100% + 2px)";
                 }
 

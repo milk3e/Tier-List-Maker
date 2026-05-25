@@ -9,7 +9,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 **Features**
 - Creatable, moveable, colorable, deletable tiers.
 - Import images by file, URL, clipboard, or drag and drop. Move and sort them within tiers, can crop into squares or keep aspect ratio, can delete them, and can compress them.
-- Gif support.
+- Gif support, animated in the tier list.
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
 - Create an image out of tier list with adjustable quality.
 - Append descriptions to images to add any information you want.

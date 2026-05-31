@@ -1,4 +1,4 @@
-Current Version: **2.2**
+Current Version: **2.3**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 

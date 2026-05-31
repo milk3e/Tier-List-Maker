@@ -1,7 +1,6 @@
 Current Version: **2.3**
 
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
-*Link is undergoing maintenence!
 
 <img width="500" height="281" alt="pic" src="https://github.com/user-attachments/assets/a3e78fd2-3dcf-4b50-9bc0-28420f10913e" />
 

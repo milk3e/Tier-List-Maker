@@ -20,7 +20,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 - And more!
 
 **How to Download**
-1. Download 'tier-list-maker.html' by either clicking it above in the file list and then clicking the download button, or by clicking the green 'Code' button, downloading the zip, and extracting it.
+1. Download 'index.html' by either clicking it above in the file list and then clicking the download button, or by clicking the green 'Code' button, downloading the zip, and extracting it.
 2. Double-click the html file to run it directly in your web browser.
 3. Have fun!
 

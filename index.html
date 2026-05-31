@@ -515,6 +515,7 @@
                 font-size: 0.9em;
             }
             .tier-tab-add:hover { background: #333; color: #fff; }
+            .tab-drag-over { outline: 2px solid #4af; outline-offset: -2px; }
         </style>
     </head>
     <body>
@@ -2961,6 +2962,8 @@
                 renderBank();
             }
 
+            let _tabDragId = null;
+
             function renderTabs() {
                 const bar = document.getElementById("tab-bar");
                 bar.innerHTML = "";
@@ -2968,7 +2971,11 @@
                     const btn = document.createElement("button");
                     btn.className = "tier-tab" + (tab.id === state.activeTabId ? " active-tab" : "");
                     btn.textContent = tab.name;
+                    btn.draggable = true;
+                    btn.dataset.tabId = tab.id;
+
                     btn.addEventListener("click", (e) => {
+                        if (_tabDragMoved) return; // suppress click only right after a successful drop
                         if (tab.id === state.activeTabId) {
                             openTabContextMenu(tab.id);
                         } else {
@@ -2979,8 +2986,44 @@
                         e.preventDefault();
                         openTabContextMenu(tab.id);
                     });
-                    // Long-press / right-click visual cue via title
-                    btn.title = "Click to switch • Right-click for options";
+
+                    btn.addEventListener("dragstart", (e) => {
+                        _tabDragId = tab.id;
+                        btn.style.opacity = "0.5";
+                        e.dataTransfer.effectAllowed = "move";
+                    });
+                    btn.addEventListener("dragend", () => {
+                        btn.style.opacity = "";
+                        _tabDragId = null;
+                        document.querySelectorAll(".tier-tab").forEach(b => b.classList.remove("tab-drag-over"));
+                        // Reset flag after click event has fired (click fires after dragend)
+                        setTimeout(() => { _tabDragMoved = false; }, 0);
+                    });
+                    btn.addEventListener("dragover", (e) => {
+                        if (!_tabDragId || _tabDragId === tab.id) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        document.querySelectorAll(".tier-tab").forEach(b => b.classList.remove("tab-drag-over"));
+                        btn.classList.add("tab-drag-over");
+                    });
+                    btn.addEventListener("dragleave", () => {
+                        btn.classList.remove("tab-drag-over");
+                    });
+                    btn.addEventListener("drop", (e) => {
+                        e.preventDefault();
+                        btn.classList.remove("tab-drag-over");
+                        if (!_tabDragId || _tabDragId === tab.id) return;
+                        _tabDragMoved = true;
+                        const fromIdx = state.tabs.findIndex(t => t.id === _tabDragId);
+                        const toIdx = state.tabs.findIndex(t => t.id === tab.id);
+                        if (fromIdx === -1 || toIdx === -1) return;
+                        const [moved] = state.tabs.splice(fromIdx, 1);
+                        state.tabs.splice(toIdx, 0, moved);
+                        renderTabs();
+                        markUnsaved();
+                    });
+
+                    btn.title = "Click to switch • Right-click for options • Drag to reorder";
                     bar.appendChild(btn);
                 });
                 const addBtn = document.createElement("button");
@@ -2989,6 +3032,8 @@
                 addBtn.addEventListener("click", () => addNewTab());
                 bar.appendChild(addBtn);
             }
+
+            let _tabDragMoved = false;
 
             function addNewTab(name, tiers) {
                 syncStateFromDOM();
@@ -3058,10 +3103,20 @@
                         return;
                     }
                     syncStateFromDOM();
-                    // Return this tab's tiered items to bank
+                    // Only add to bank images that are EXCLUSIVELY in this tab's tiers
+                    // (not in state.bank and not in any other tab's tiers)
+                    const keysInOtherTabs = new Set();
+                    for (const t of state.tabs) {
+                        if (t.id === _activeTabCtxId) continue;
+                        t.tiers.forEach(tier => tier.images.forEach(k => keysInOtherTabs.add(k)));
+                    }
+                    const bankSet = new Set(state.bank);
                     tab.tiers.forEach(tier => {
                         tier.images.forEach(key => {
-                            if (!state.bank.includes(key)) state.bank.push(key);
+                            if (!bankSet.has(key) && !keysInOtherTabs.has(key)) {
+                                state.bank.push(key);
+                                bankSet.add(key);
+                            }
                         });
                     });
                     const idx = state.tabs.findIndex(t => t.id === _activeTabCtxId);

@@ -39,6 +39,8 @@ Depending on your operating system, browser, or file explorer, you may have a ca
 
 If you are on a privacy-focused browser, you may have Canvas Data disabled, which can break certain features. A quick way in Firefox to enable it for that tab is to click the icon left of the URL (either looks like switches or like a picture), and enable it there.
 
+Some lite browsers like the DuckDuckGo browser on mobile may have weird colors.
+
 
 *Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*
 

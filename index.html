@@ -1413,6 +1413,10 @@
                 if (exportJpegWrap) exportJpegWrap.style.display = "none";
 
                 // Restore UI preferences saved earlier this session (survives refresh).
+                // Default to bottom layout on mobile/touch devices (persisted prefs override this)
+                if (window.matchMedia("(pointer: coarse)").matches) {
+                    state.settings.layout = "bottom";
+                }
                 loadPersistedSettings();
 
                 renderTabs();
@@ -3882,7 +3886,7 @@
 
                         const ghostData = createDragGhostCanvas(img, key);
                         if (ghostData) {
-                            ghostData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            ghostData.canvas.style.cssText = "display:block;";
                             _dragPlaceholder.appendChild(ghostData.canvas);
                         } else {
                             const placeholderImg = document.createElement("img");
@@ -3948,10 +3952,11 @@
 
                         // Create ghost element
                         _touchGhost = document.createElement("div");
-                        _touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:99998; opacity:0.75; width:70px; height:70px; border-radius:4px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+                        const _tGhostAspect = state.settings.aspectRatio === "aspect" ? "width:auto; height:70px;" : "width:70px; height:70px;";
+                        _touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:99998; opacity:0.75; ${_tGhostAspect} border-radius:4px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
                         const tGhostData = createDragGhostCanvas(img, key);
                         if (tGhostData) {
-                            tGhostData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            tGhostData.canvas.style.cssText = "display:block;";
                             _touchGhost.appendChild(tGhostData.canvas);
                         } else {
                             const ghostImg = document.createElement("img");
@@ -3966,7 +3971,7 @@
                         _dragPlaceholder.className = "drag-placeholder";
                         const tPhData = createDragGhostCanvas(img, key);
                         if (tPhData) {
-                            tPhData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            tPhData.canvas.style.cssText = "display:block;";
                             _dragPlaceholder.appendChild(tPhData.canvas);
                         } else {
                             const placeholderImg = document.createElement("img");

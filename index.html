@@ -14,7 +14,7 @@
                 font-family: sans-serif;
                 background-color: var(--bg-color);
                 color: var(--text-color);
-                margin: 20px;
+                margin: 8px 20px 20px;
                 user-select: none;
             }
 
@@ -55,7 +55,7 @@
                 background: var(--panel-color);
                 padding: 15px;
                 border-radius: 8px;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
                 display: flex;
                 gap: 15px;
                 align-items: center;
@@ -522,7 +522,7 @@
         <h1
             id="page-title"
             title="Click to edit title"
-            style="cursor: pointer; display: inline-block"
+            style="cursor: pointer; display: inline-block; margin: 8px 0 8px;"
         >
             Tier List Maker
         </h1>
@@ -943,17 +943,48 @@
                     alt="Preview"
                 />
                 <div
-                    id="modal-item-filename"
+                    id="modal-item-filename-wrap"
                     style="
                         font-size: 0.8em;
                         color: #aaa;
                         text-align: center;
                         word-break: break-all;
                         padding: 2px 0 4px;
+                        display: none;
+                    "
+                >
+                    <input
+                        id="modal-item-filename"
+                        type="text"
+                        placeholder="(no filename)"
+                        title="Click to edit filename"
+                        style="
+                            width: 100%;
+                            background: transparent;
+                            border: none;
+                            border-bottom: 1px dashed #555;
+                            color: #aaa;
+                            font-size: 1em;
+                            font-family: sans-serif;
+                            text-align: center;
+                            padding: 2px 4px;
+                            cursor: text;
+                            outline: none;
+                            box-sizing: border-box;
+                        "
+                    />
+                </div>
+                <div
+                    id="modal-item-filesize"
+                    style="
+                        font-size: 0.75em;
+                        color: #777;
+                        text-align: center;
+                        padding: 0 0 4px;
+                        display: none;
                     "
                 ></div>
                 <label>
-                    Description / Notes:
                     <textarea
                         id="modal-item-desc"
                         placeholder="Type an item description here..."
@@ -2337,6 +2368,14 @@
                             } else {
                                 delete state.descriptions[key];
                             }
+                            // Save edited filename
+                            const newName = document.getElementById("modal-item-filename").value.trim();
+                            if (!state.fileNames) state.fileNames = {};
+                            if (newName) {
+                                state.fileNames[key] = newName;
+                            } else {
+                                delete state.fileNames[key];
+                            }
                             markUnsaved();
                         }
                         document
@@ -2734,6 +2773,12 @@
                     });
             }
 
+            function formatBytes(bytes) {
+                if (bytes < 1024) return bytes + " B";
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+                return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+            }
+
             function openModal(tierId) {
                 activeModalTierId = tierId;
                 const tier = state.tiers.find((t) => t.id === tierId);
@@ -2782,18 +2827,33 @@
                 document.getElementById("modal-item-desc").value = savedDesc;
 
                 const fileObj = blobRegistry[key];
-                const filenameEl = document.getElementById(
-                    "modal-item-filename",
-                );
+                const filenameWrap = document.getElementById("modal-item-filename-wrap");
+                const filenameInput = document.getElementById("modal-item-filename");
+                const filesizeEl = document.getElementById("modal-item-filesize");
                 const fname =
                     (state.fileNames && state.fileNames[key]) ||
                     (fileObj && fileObj.name) ||
                     null;
-                if (fname) {
-                    filenameEl.textContent = fname;
-                    filenameEl.style.display = "block";
+                if (fname !== null) {
+                    filenameInput.value = fname;
+                    filenameWrap.style.display = "block";
                 } else {
-                    filenameEl.style.display = "none";
+                    filenameInput.value = "";
+                    filenameWrap.style.display = "block"; // show even when blank so user can add a label
+                }
+
+                // Compute and show image size from base64 src
+                const src = imageRegistry[key] || img.src;
+                if (src && src.startsWith("data:")) {
+                    // base64 size estimation: base64 chars * 3/4 minus padding
+                    const commaIdx = src.indexOf(",");
+                    const b64 = commaIdx >= 0 ? src.slice(commaIdx + 1) : src;
+                    const padding = (b64.slice(-2).match(/=/g) || []).length;
+                    const bytes = Math.floor(b64.length * 3 / 4) - padding;
+                    filesizeEl.textContent = formatBytes(bytes);
+                    filesizeEl.style.display = "block";
+                } else {
+                    filesizeEl.style.display = "none";
                 }
 
                 document.getElementById("item-modal").classList.add("active");
@@ -3223,9 +3283,21 @@
                     (sum, t) => sum + t.images.length,
                     0,
                 );
+                // Compute total size of all images in the registry
+                let totalBytes = 0;
+                for (const key of Object.keys(imageRegistry)) {
+                    const src = imageRegistry[key];
+                    if (src && src.startsWith("data:")) {
+                        const commaIdx = src.indexOf(",");
+                        const b64 = commaIdx >= 0 ? src.slice(commaIdx + 1) : src;
+                        const padding = (b64.slice(-2).match(/=/g) || []).length;
+                        totalBytes += Math.floor(b64.length * 3 / 4) - padding;
+                    }
+                }
+                const sizeStr = formatBytes(totalBytes);
                 const countEl = document.getElementById("bank-count");
                 if (countEl) {
-                    countEl.textContent = `(${bankKeys.length} in bank, ${tierCount} in list)`;
+                    countEl.textContent = `(${bankKeys.length} in bank, ${tierCount} in list) · ${sizeStr}`;
                 }
             }
 
@@ -3364,6 +3436,123 @@
                     syncStateFromDOM();
                     markUnsaved();
                 });
+
+                // ---- Touch drag support (mobile) ----
+                let _touchDragActive = false;
+                let _touchStartX = 0, _touchStartY = 0;
+                let _touchGhost = null;
+                const TOUCH_DRAG_THRESHOLD = 6; // px before drag starts
+
+                trigger.addEventListener("touchstart", (e) => {
+                    const t = e.touches[0];
+                    _touchStartX = t.clientX;
+                    _touchStartY = t.clientY;
+                    _touchDragActive = false;
+                }, { passive: true });
+
+                trigger.addEventListener("touchmove", (e) => {
+                    const t = e.touches[0];
+                    const dx = t.clientX - _touchStartX;
+                    const dy = t.clientY - _touchStartY;
+
+                    if (!_touchDragActive) {
+                        if (Math.sqrt(dx * dx + dy * dy) < TOUCH_DRAG_THRESHOLD) return;
+                        // Begin drag
+                        _touchDragActive = true;
+                        hideZoomPortal();
+                        SilverDraggedElement = trigger;
+
+                        // Create ghost element
+                        _touchGhost = document.createElement("div");
+                        _touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:99998; opacity:0.75; width:70px; height:70px; border-radius:4px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+                        const ghostImg = document.createElement("img");
+                        ghostImg.src = src;
+                        ghostImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
+                        _touchGhost.appendChild(ghostImg);
+                        document.body.appendChild(_touchGhost);
+
+                        // Create placeholder
+                        _dragPlaceholder = document.createElement("div");
+                        _dragPlaceholder.className = "drag-placeholder";
+                        const placeholderImg = document.createElement("img");
+                        placeholderImg.src = src;
+                        _dragPlaceholder.appendChild(placeholderImg);
+                        updatePlaceholderStyle();
+                        wrapper.parentNode.insertBefore(_dragPlaceholder, wrapper);
+                        wrapper.style.display = "none";
+                        img.style.opacity = "0.4";
+                    }
+
+                    if (!_touchDragActive) return;
+                    e.preventDefault();
+
+                    // Move ghost
+                    if (_touchGhost) {
+                        _touchGhost.style.left = (t.clientX - 35) + "px";
+                        _touchGhost.style.top = (t.clientY - 35) + "px";
+                    }
+
+                    // Find drop target container under touch point
+                    const el = document.elementFromPoint(t.clientX, t.clientY);
+                    let container = null;
+                    if (el) {
+                        const tierItems = el.closest(".tier-items");
+                        const imageBank = el.closest("#image-bank");
+                        container = tierItems || imageBank;
+                    }
+
+                    if (container && _dragPlaceholder) {
+                        if (_dragFramePending) return;
+                        _dragFramePending = true;
+                        requestAnimationFrame(() => {
+                            _dragFramePending = false;
+                            if (!SilverDraggedElement || !_dragPlaceholder) return;
+                            const result = getDragAfterElement(container, t.clientX, t.clientY);
+                            if (result.insertBefore == null) {
+                                if (container.lastElementChild !== _dragPlaceholder) {
+                                    container.appendChild(_dragPlaceholder);
+                                }
+                            } else if (result.insertBefore !== _dragPlaceholder) {
+                                if (_dragPlaceholder.nextElementSibling !== result.insertBefore) {
+                                    container.insertBefore(_dragPlaceholder, result.insertBefore);
+                                }
+                            }
+                        });
+                    }
+                }, { passive: false });
+
+                const _endTouchDrag = () => {
+                    if (!_touchDragActive) return;
+                    _touchDragActive = false;
+
+                    if (_touchGhost) { _touchGhost.remove(); _touchGhost = null; }
+
+                    img.style.opacity = "1";
+                    img.style.visibility = "visible";
+                    wrapper.style.display = "";
+
+                    if (_dragPlaceholder && _dragPlaceholder.parentNode) {
+                        _dragPlaceholder.parentNode.insertBefore(wrapper, _dragPlaceholder);
+                        _dragPlaceholder.remove();
+                    }
+                    _dragPlaceholder = null;
+                    SilverDraggedElement = null;
+                    _dragFramePending = false;
+
+                    syncStateFromDOM();
+                    markUnsaved();
+                };
+
+                trigger.addEventListener("touchend", (e) => {
+                    if (!_touchDragActive) {
+                        // It was a tap — open the modal
+                        hideZoomPortal();
+                        openItemModal(wrapper);
+                        return;
+                    }
+                    _endTouchDrag();
+                });
+                trigger.addEventListener("touchcancel", _endTouchDrag);
 
                 wrapper.appendChild(trigger);
                 wrapper.appendChild(img);

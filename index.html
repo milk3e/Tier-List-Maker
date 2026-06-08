@@ -75,6 +75,89 @@
                 background: #555;
             }
 
+            /* Toolbar dropdowns */
+            .toolbar-dropdown {
+                position: relative;
+                display: inline-block;
+            }
+            .toolbar-dropdown-btn {
+                white-space: nowrap;
+            }
+            .toolbar-dropdown-menu {
+                display: none;
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                background: #333;
+                border: 1px solid #555;
+                border-radius: 6px;
+                padding: 4px;
+                z-index: 500;
+                min-width: 200px;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+                flex-direction: column;
+                gap: 3px;
+            }
+            .toolbar-dropdown-menu.open {
+                display: flex;
+            }
+            .toolbar-dropdown-menu button {
+                width: 100%;
+                text-align: left;
+                background: transparent;
+                border-radius: 4px;
+                padding: 8px 12px;
+                white-space: nowrap;
+            }
+            .toolbar-dropdown-menu button:hover {
+                background: #555;
+            }
+
+            /* Crop adjustment modal */
+            #crop-modal .modal-content {
+                width: 360px;
+            }
+            .crop-canvas-wrap {
+                position: relative;
+                width: 100%;
+                background: #111;
+                border-radius: 6px;
+                overflow: hidden;
+                cursor: crosshair;
+                user-select: none;
+            }
+            #crop-canvas {
+                display: block;
+                width: 100%;
+            }
+            .crop-slider-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 0.85em;
+                color: #ccc;
+            }
+            .crop-slider-row input[type=range] {
+                flex: 1;
+                padding: 0;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+            }
+            .crop-slider-label {
+                width: 56px;
+                flex-shrink: 0;
+                font-weight: bold;
+                font-size: 0.85em;
+            }
+            .crop-slider-val {
+                width: 36px;
+                text-align: right;
+                flex-shrink: 0;
+                font-size: 0.82em;
+                color: #aaa;
+            }
+
             /* Tier Board */
             .tier-board {
                 display: flex;
@@ -173,6 +256,7 @@
                 display: inline-grid;
                 grid-template-areas: "stack";
                 place-items: center;
+                overflow: hidden;
             }
 
             /* THE HITBOX TRIGGER CONTAINER */
@@ -230,6 +314,7 @@
                 box-sizing: border-box;
                 outline: 2px dashed #4af;
                 background: rgba(68, 170, 255, 0.1);
+                overflow: hidden;
             }
             .drag-placeholder img {
                 grid-area: stack;
@@ -275,31 +360,36 @@
                 left: 50%;
                 transform: translateX(-50%) scale(calc(1 / 2.2));
                 transform-origin: bottom center;
-                color: rgba(255, 255, 255, 0.9);
+                color: rgba(255, 255, 255, 0.95);
                 font-size: 10px;
                 line-height: 1.3;
                 text-align: center;
                 white-space: nowrap;
                 pointer-events: none;
-                text-shadow:
-                    0 1px 3px rgba(0, 0, 0, 0.9),
-                    0 0 6px rgba(0, 0, 0, 0.7);
+                padding: 2px 7px;
+                border-radius: 4px;
             }
             #portal-rank {
-                bottom: calc(100% + 2px);
-                font-size: 11px;
+                bottom: calc(100% + 12px);
+                font-size: 12px;
                 font-weight: bold;
-                color: rgba(255, 220, 100, 0.95);
+                color: rgba(255, 220, 100, 0.98);
+                background: rgba(0, 0, 0, 0.72);
+                border: 1px solid rgba(255, 220, 100, 0.35);
+                transform-origin: bottom center;
             }
             #portal-filename {
-                bottom: calc(100% + 16px);
+                bottom: calc(100% + 2px);
                 font-size: 10px;
-                color: rgba(200, 200, 200, 0.9);
+                color: rgba(220, 220, 220, 0.95);
+                background: rgba(0, 0, 0, 0.72);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                transform-origin: bottom center;
             }
 
             #global-zoom-portal .portal-tooltip {
                 position: absolute;
-                top: 76px;
+                top: 72px;
                 left: 50%;
                 transform: translateX(-50%) scale(calc(1 / 2.2));
                 transform-origin: top center;
@@ -537,25 +627,37 @@
         </h1>
 
         <div class="toolbar">
-            <input type="file" id="image-loader" multiple accept="image/*" />
-            <button
-                id="paste-clipboard-btn"
-                title="Paste image from clipboard (Ctrl+V)"
-            >
-                📋 Paste Image (Ctrl+V)
-            </button>
-            <button id="add-url-btn">🔗 Add Image URL</button>
+            <!-- Hidden file input, triggered by +Add Image -->
+            <input type="file" id="image-loader" multiple accept="image/*" style="display:none;" />
+
+            <!-- +Add Image dropdown -->
+            <div class="toolbar-dropdown" id="add-image-dropdown">
+                <button class="toolbar-dropdown-btn" id="add-image-btn">➕ Add Image ▾</button>
+                <div class="toolbar-dropdown-menu" id="add-image-menu">
+                    <button id="add-browse-btn">📁 Browse Files</button>
+                    <button id="paste-clipboard-btn" title="Paste image from clipboard (Ctrl+V)">📋 Paste from Clipboard</button>
+                    <button id="add-url-btn">🔗 Add Image URL</button>
+                </div>
+            </div>
+
             <button id="add-tier-btn">➕ Add New Tier</button>
-            <button id="settings-open-btn">⚙ Layout & Settings</button>
-            <button id="export-json-btn">💾 Export JSON</button>
-            <button id="import-json-btn">📂 Import JSON</button>
-            <button id="export-image-btn">🖼 Export Image</button>
             <button
                 id="compress-btn"
                 title="Re-encode all images as JPEG to reduce file size"
             >
                 🗜 Compress Images
             </button>
+            <button id="settings-open-btn">⚙ Layout & Settings</button>
+
+            <!-- Save/Load dropdown -->
+            <div class="toolbar-dropdown" id="saveload-dropdown">
+                <button class="toolbar-dropdown-btn" id="saveload-btn">💾 Save/Load ▾</button>
+                <div class="toolbar-dropdown-menu" id="saveload-menu">
+                    <button id="export-json-btn">💾 Export JSON</button>
+                    <button id="import-json-btn">📂 Import JSON</button>
+                    <button id="export-image-btn">🖼 Export Image</button>
+                </div>
+            </div>
         </div>
 
         <!-- Tier Tab Bar -->
@@ -586,7 +688,7 @@
                             background: --panel-color;
                         "
                     >
-                        ⮑ Return All to Bank
+                        ⮑ Return All
                     </button>
                     <button
                         id="place-all-btn"
@@ -927,7 +1029,7 @@
         <!-- Place All Modal -->
         <div id="place-all-modal" class="modal-overlay">
             <div class="modal-content" style="width: 320px">
-                <h3>⮑ Place All Bank Images</h3>
+                <h3>⮐ Place All Bank Images</h3>
                 <p style="color: #aaa; font-size: 0.85em; margin: 0 0 12px">
                     Select one or more tiers. If multiple are selected, bank images will be randomly distributed among them.
                 </p>
@@ -942,9 +1044,44 @@
             </div>
         </div>
 
+        <!-- Crop Adjustment Modal -->
+        <div id="crop-modal" class="modal-overlay">
+            <div class="modal-content" style="width:360px;">
+                <h3 style="margin:0 0 12px;">Adjust Crop</h3>
+                <div class="crop-canvas-wrap" id="crop-canvas-wrap">
+                    <canvas id="crop-canvas" width="320" height="320"></canvas>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+                    <div class="crop-slider-row">
+                        <span class="crop-slider-label">Offset X</span>
+                        <input type="range" id="crop-x" min="-100" max="100" value="0" step="1">
+                        <span class="crop-slider-val" id="crop-x-val">0%</span>
+                    </div>
+                    <div class="crop-slider-row">
+                        <span class="crop-slider-label">Offset Y</span>
+                        <input type="range" id="crop-y" min="-100" max="100" value="0" step="1">
+                        <span class="crop-slider-val" id="crop-y-val">0%</span>
+                    </div>
+                    <div class="crop-slider-row">
+                        <span class="crop-slider-label">Zoom</span>
+                        <input type="range" id="crop-zoom" min="100" max="1000" value="100" step="1">
+                        <span class="crop-slider-val" id="crop-zoom-val">1.0×</span>
+                    </div>
+                </div>
+                <div class="modal-actions" style="margin-top:14px;">
+                    <button id="crop-reset-btn">Reset</button>
+                    <button id="crop-cancel-btn">Cancel</button>
+                    <button id="crop-save-btn" class="btn-info">Apply</button>
+                </div>
+            </div>
+        </div>
+
         <div id="item-modal" class="modal-overlay">
             <div class="modal-content">
-                <h3>Image Settings</h3>
+                <h3 style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px;">
+                    <span>Image Settings</span>
+                    <button id="modal-item-adjust-crop-btn" title="Adjust square crop position and zoom" style="font-size:0.78em; padding:4px 10px; background:#3a5a3a; display:none;">✂ Adjust Crop</button>
+                </h3>
                 <img
                     id="modal-item-preview"
                     class="modal-img-preview"
@@ -1064,6 +1201,7 @@
                 descriptions: {},
                 fileNames: {},
                 imageData: {},
+                cropData: {},
             };
 
             // Convenience getter for current tab's tiers
@@ -1278,6 +1416,7 @@
                 renderBank();
                 setupEventListeners();
                 setupTabContextMenuListeners();
+                setupCropModalListeners();
                 applyLayoutMode(state.settings.layout);
                 updateGlobalAspectClass();
                 setupTitleEdit(document.getElementById("page-title"));
@@ -1333,7 +1472,7 @@
                 }
             }
 
-            function createDragGhostCanvas(imgElement) {
+            function createDragGhostCanvas(imgElement, key) {
                 const imgW = imgElement.naturalWidth || imgElement.width || 70;
                 const imgH =
                     imgElement.naturalHeight || imgElement.height || 70;
@@ -1353,12 +1492,28 @@
                 if (!ctx) return null;
 
                 if (state.settings.aspectRatio === "square") {
-                    const scale = Math.max(70 / imgW, 70 / imgH);
-                    const nw = imgW * scale;
-                    const nh = imgH * scale;
-                    const nx = (70 - nw) / 2;
-                    const ny = (70 - nh) / 2;
-                    ctx.drawImage(imgElement, nx, ny, nw, nh);
+                    const crop = key && state.cropData && state.cropData[key];
+                    const ox = crop ? (crop.x || 0) : 0;
+                    const oy = crop ? (crop.y || 0) : 0;
+                    const zoom = crop ? (crop.zoom || 1) : 1;
+
+                    // object-fit: cover base scale
+                    const baseScale = Math.max(70 / imgW, 70 / imgH);
+                    const scale = baseScale * zoom;
+                    const drawW = imgW * scale;
+                    const drawH = imgH * scale;
+                    // translate matching applyCropToImg
+                    const txPx = -(ox / 100) * (zoom - 1) * 35;
+                    const tyPx = -(oy / 100) * (zoom - 1) * 35;
+                    const imgLeft = 35 - drawW / 2 + txPx;
+                    const imgTop  = 35 - drawH / 2 + tyPx;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, 0, 70, 70);
+                    ctx.clip();
+                    ctx.drawImage(imgElement, imgLeft, imgTop, drawW, drawH);
+                    ctx.restore();
                 } else {
                     ctx.drawImage(imgElement, 0, 0, canvasW, canvasH);
                 }
@@ -1384,6 +1539,12 @@
                     bank.classList.remove("aspect-mode-active");
                     bank.classList.add("aspect-mode-inactive");
                 }
+                // Re-apply or clear crop on all visible images
+                document.querySelectorAll(".tier-item-wrap").forEach(wrap => {
+                    const key = wrap.dataset.imgKey;
+                    const img = wrap.querySelector(".tier-item-img");
+                    if (key && img) applyCropToImg(img, key);
+                });
             }
 
             function setupTitleEdit(h1El) {
@@ -1644,6 +1805,34 @@
             }
 
             function setupEventListeners() {
+                // --- Toolbar Dropdown Logic ---
+                function setupDropdown(btnId, menuId) {
+                    const btn = document.getElementById(btnId);
+                    const menu = document.getElementById(menuId);
+                    if (!btn || !menu) return;
+                    btn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        // Close other dropdowns
+                        document.querySelectorAll(".toolbar-dropdown-menu.open").forEach(m => {
+                            if (m !== menu) m.classList.remove("open");
+                        });
+                        menu.classList.toggle("open");
+                    });
+                }
+                setupDropdown("add-image-btn", "add-image-menu");
+                setupDropdown("saveload-btn", "saveload-menu");
+
+                // Close dropdowns when clicking outside
+                document.addEventListener("click", () => {
+                    document.querySelectorAll(".toolbar-dropdown-menu.open").forEach(m => m.classList.remove("open"));
+                });
+
+                // Browse files button triggers hidden file input
+                document.getElementById("add-browse-btn").addEventListener("click", () => {
+                    document.getElementById("add-image-menu").classList.remove("open");
+                    document.getElementById("image-loader").click();
+                });
+
                 // --- Settings Application Bindings ---
                 document
                     .getElementById("settings-open-btn")
@@ -2175,6 +2364,10 @@
                                                 if (importedDescriptions[k]) {
                                                     state.descriptions[newKey] = importedDescriptions[k];
                                                 }
+                                                if (parsed.cropData && parsed.cropData[k]) {
+                                                    if (!state.cropData) state.cropData = {};
+                                                    state.cropData[newKey] = parsed.cropData[k];
+                                                }
                                                 keyMap[k] = newKey;
                                             }
 
@@ -2216,6 +2409,7 @@
                                             state = parsed;
                                             if (!state.descriptions) state.descriptions = {};
                                             if (!state.fileNames) state.fileNames = {};
+                                            if (!state.cropData) state.cropData = {};
                                             if (!state.settings)
                                                 state.settings = {
                                                     aspectRatio: "square",
@@ -2356,6 +2550,16 @@
                             .getElementById("item-modal")
                             .classList.remove("active");
                         activeModalItemWrap = null;
+                    });
+
+                document
+                    .getElementById("modal-item-adjust-crop-btn")
+                    .addEventListener("click", () => {
+                        if (!activeModalItemWrap) return;
+                        const key = activeModalItemWrap.dataset.imgKey;
+                        // Close item modal first so crop modal isn't behind it
+                        document.getElementById("item-modal").classList.remove("active");
+                        openCropModal(key);
                     });
 
                 document
@@ -2829,6 +3033,14 @@
                 document.getElementById("modal-item-preview").src = img.src;
                 document.getElementById("modal-item-desc").value = savedDesc;
 
+                // Show/hide Adjust Crop button
+                const cropBtn = document.getElementById("modal-item-adjust-crop-btn");
+                if (state.settings.aspectRatio === "square") {
+                    cropBtn.style.display = "";
+                } else {
+                    cropBtn.style.display = "none";
+                }
+
                 const fileObj = blobRegistry[key];
                 const filenameWrap = document.getElementById("modal-item-filename-wrap");
                 const filenameInput = document.getElementById("modal-item-filename");
@@ -2886,9 +3098,16 @@
                 const portalRank = document.getElementById("portal-rank");
                 const portalFilename =
                     document.getElementById("portal-filename");
-                const rect = imgElement.getBoundingClientRect();
+                // Use the wrapper's rect (always the true 70px cell) not imgElement's
+                // (which may be scaled by crop transform and report a larger bounding box).
+                const rect = wrapperElement.getBoundingClientRect();
 
                 portalImg.src = imgElement.src;
+                // Ensure the portal img is never affected by any crop inline styles
+                portalImg.style.transform = "";
+                portalImg.style.transformOrigin = "";
+                portalImg.style.objectFit = "contain";
+                portalImg.style.objectPosition = "";
                 portal.style.width = `${rect.width}px`;
                 portal.style.height = `${rect.height}px`;
                 portal.style.left = `${rect.left}px`;
@@ -2919,18 +3138,23 @@
                     portalFilename.style.display = "none";
                 }
 
-                // Position filename/rank: if rank shown, filename goes higher
+                // Rank above filename; filename closest to image.
+                // When only one is shown, both sit at bottom+2px via CSS defaults.
+                // When both shown: rank at bottom+18px, filename at bottom+2px (set in CSS).
+                // Override only the single-shown cases.
                 const showingRank =
                     rankNum !== null && state.settings.showRank !== false;
                 const showingFilename =
                     fname && state.settings.showFilename !== false;
-                if (showingRank && showingFilename) {
+                if (showingRank && !showingFilename) {
                     portalRank.style.bottom = "calc(100% + 2px)";
-                    portalFilename.style.bottom = "calc(100% + 16px)";
-                } else if (showingRank) {
-                    portalRank.style.bottom = "calc(100% + 2px)";
-                } else if (showingFilename) {
+                } else {
+                    portalRank.style.bottom = ""; // use CSS default (calc(100% + 9px))
+                }
+                if (!showingRank && showingFilename) {
                     portalFilename.style.bottom = "calc(100% + 2px)";
+                } else {
+                    portalFilename.style.bottom = ""; // use CSS default (calc(100% + 2px))
                 }
 
                 // Description (below image, with background box — unchanged)
@@ -3325,6 +3549,216 @@
                 updateBankCount();
             }
 
+            // Apply saved crop (offsetX, offsetY, zoom) to an img element in square mode
+            // Uses transform: translate + scale so the wrapper's overflow:hidden clips correctly.
+            function applyCropToImg(imgEl, key) {
+                if (!key) return;
+                const crop = state.cropData && state.cropData[key];
+                // Always reset sizing (never let these linger)
+                imgEl.style.width = "";
+                imgEl.style.height = "";
+                imgEl.style.objectFit = "";
+                imgEl.style.objectPosition = "";
+                imgEl.style.transform = "";
+                imgEl.style.transformOrigin = "";
+                if (!crop || state.settings.aspectRatio !== "square") return;
+
+                const ox = crop.x || 0;   // -100..100 → pan offset as % of overflow
+                const oy = crop.y || 0;
+                const zoom = crop.zoom || 1; // 1..3
+
+                // The img fills the 70px container exactly with object-fit:cover.
+                // scale(zoom) expands it from center; the overflow:hidden wrapper clips.
+                // translate moves the scaled image: positive ox → shift right (show more left side).
+                // The max shift is (zoom-1)*70/2 px each direction, mapped from ±100.
+                const maxShiftPct = ((zoom - 1) / zoom) * 50; // in % of the scaled size
+                // In px terms for a 70px container: (zoom-1)*35 px max shift
+                const txPx = -(ox / 100) * (zoom - 1) * 35;
+                const tyPx = -(oy / 100) * (zoom - 1) * 35;
+
+                imgEl.style.objectFit = "cover";
+                imgEl.style.transformOrigin = "center center";
+                imgEl.style.transform = `translate(${txPx}px, ${tyPx}px) scale(${zoom})`;
+            }
+
+            // Refresh crop styling on all rendered instances of a key
+            function refreshCropForKey(key) {
+                document.querySelectorAll(`.tier-item-wrap[data-img-key="${key}"] .tier-item-img`).forEach(imgEl => {
+                    applyCropToImg(imgEl, key);
+                });
+            }
+
+            // ---- Crop Modal ----
+            let _cropKey = null;
+            let _cropImg = null;
+            let _cropOrigValues = null;
+
+            function openCropModal(key) {
+                _cropKey = key;
+                const src = imageRegistry[key];
+                if (!src) return;
+
+                const existing = (state.cropData && state.cropData[key]) || { x: 0, y: 0, zoom: 1 };
+                _cropOrigValues = { ...existing };
+
+                // Set sliders
+                document.getElementById("crop-x").value = existing.x || 0;
+                document.getElementById("crop-y").value = existing.y || 0;
+                document.getElementById("crop-zoom").value = Math.round((existing.zoom || 1) * 100);
+                updateCropSliderLabels();
+
+                // Load image for canvas preview
+                _cropImg = new Image();
+                _cropImg.onload = () => { drawCropPreview(); };
+                _cropImg.src = src;
+
+                document.getElementById("crop-modal").classList.add("active");
+            }
+
+            function getCropValues() {
+                const x = parseInt(document.getElementById("crop-x").value, 10);
+                const y = parseInt(document.getElementById("crop-y").value, 10);
+                const zoom = parseInt(document.getElementById("crop-zoom").value, 10) / 100;
+                return { x, y, zoom };
+            }
+
+            function updateCropSliderLabels() {
+                const x = document.getElementById("crop-x").value;
+                const y = document.getElementById("crop-y").value;
+                const zoom = document.getElementById("crop-zoom").value;
+                document.getElementById("crop-x-val").textContent = x + "%";
+                document.getElementById("crop-y-val").textContent = y + "%";
+                document.getElementById("crop-zoom-val").textContent = (zoom / 100).toFixed(2) + "×";
+            }
+
+            function drawCropPreview() {
+                const canvas = document.getElementById("crop-canvas");
+                const wrap = document.getElementById("crop-canvas-wrap");
+                const size = Math.min(wrap.clientWidth || 320, 320);
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext("2d");
+                if (!_cropImg || !_cropImg.complete) return;
+
+                const { x, y, zoom } = getCropValues();
+                const iw = _cropImg.naturalWidth;
+                const ih = _cropImg.naturalHeight;
+
+                // Mirror applyCropToImg exactly:
+                // 1. object-fit: cover into size×size → scale so shorter dim fills size
+                const baseScale = Math.max(size / iw, size / ih);
+                // 2. scale(zoom) from center
+                const scale = baseScale * zoom;
+                const drawW = iw * scale;
+                const drawH = ih * scale;
+
+                // 3. translate: -(ox/100)*(zoom-1)*halfSize, same ratio as 35px for 70px cell
+                const halfSize = size / 2;
+                const txPx = -(x / 100) * (zoom - 1) * halfSize;
+                const tyPx = -(y / 100) * (zoom - 1) * halfSize;
+
+                // Center of drawn image + translation
+                const imgLeft = halfSize - drawW / 2 + txPx;
+                const imgTop  = halfSize - drawH / 2 + tyPx;
+
+                ctx.clearRect(0, 0, size, size);
+                ctx.fillStyle = "#111";
+                ctx.fillRect(0, 0, size, size);
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, 0, size, size);
+                ctx.clip();
+                ctx.drawImage(_cropImg, imgLeft, imgTop, drawW, drawH);
+                ctx.restore();
+
+                // Rule-of-thirds guide lines
+                ctx.strokeStyle = "rgba(68,170,255,0.35)";
+                ctx.lineWidth = 1;
+                for (let i = 1; i < 3; i++) {
+                    ctx.beginPath(); ctx.moveTo(size * i / 3, 0); ctx.lineTo(size * i / 3, size); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, size * i / 3); ctx.lineTo(size, size * i / 3); ctx.stroke();
+                }
+            }
+
+            function setupCropModalListeners() {
+                ["crop-x", "crop-y", "crop-zoom"].forEach(id => {
+                    document.getElementById(id).addEventListener("input", () => {
+                        updateCropSliderLabels();
+                        drawCropPreview();
+                    });
+                });
+
+                document.getElementById("crop-reset-btn").addEventListener("click", () => {
+                    document.getElementById("crop-x").value = 0;
+                    document.getElementById("crop-y").value = 0;
+                    document.getElementById("crop-zoom").value = 100;
+                    updateCropSliderLabels();
+                    drawCropPreview();
+                });
+
+                document.getElementById("crop-cancel-btn").addEventListener("click", () => {
+                    document.getElementById("crop-modal").classList.remove("active");
+                    _cropKey = null;
+                    _cropImg = null;
+                });
+
+                document.getElementById("crop-save-btn").addEventListener("click", () => {
+                    if (!_cropKey) return;
+                    const { x, y, zoom } = getCropValues();
+                    if (!state.cropData) state.cropData = {};
+                    if (x === 0 && y === 0 && zoom === 1) {
+                        delete state.cropData[_cropKey];
+                    } else {
+                        state.cropData[_cropKey] = { x, y, zoom };
+                    }
+                    refreshCropForKey(_cropKey);
+                    document.getElementById("crop-modal").classList.remove("active");
+                    _cropKey = null;
+                    _cropImg = null;
+                    markUnsaved();
+                });
+
+                // Drag-to-pan on canvas
+                let _cropDragging = false, _cropDragStartX = 0, _cropDragStartY = 0, _cropDragOrigX = 0, _cropDragOrigY = 0;
+                const cropCanvas = document.getElementById("crop-canvas");
+                cropCanvas.addEventListener("mousedown", (e) => {
+                    _cropDragging = true;
+                    _cropDragStartX = e.clientX;
+                    _cropDragStartY = e.clientY;
+                    _cropDragOrigX = parseInt(document.getElementById("crop-x").value, 10);
+                    _cropDragOrigY = parseInt(document.getElementById("crop-y").value, 10);
+                    e.preventDefault();
+                });
+                document.addEventListener("mousemove", (e) => {
+                    if (!_cropDragging) return;
+                    const { zoom } = getCropValues();
+                    const size = cropCanvas.width || 320;
+                    // Dragging right = pulling image right = ox decreases (shows more right side)
+                    // Scale sensitivity by zoom so drag distance in px maps to visible range
+                    const sensitivity = 200 / Math.max(zoom, 1);
+                    const dx = -((e.clientX - _cropDragStartX) / size) * sensitivity;
+                    const dy = -((e.clientY - _cropDragStartY) / size) * sensitivity;
+                    const newX = Math.max(-100, Math.min(100, _cropDragOrigX + dx));
+                    const newY = Math.max(-100, Math.min(100, _cropDragOrigY + dy));
+                    document.getElementById("crop-x").value = Math.round(newX);
+                    document.getElementById("crop-y").value = Math.round(newY);
+                    updateCropSliderLabels();
+                    drawCropPreview();
+                });
+                document.addEventListener("mouseup", () => { _cropDragging = false; });
+
+                // Scroll to zoom on the crop canvas
+                cropCanvas.addEventListener("wheel", (e) => {
+                    e.preventDefault();
+                    const zoomEl = document.getElementById("crop-zoom");
+                    const current = parseInt(zoomEl.value, 10);
+                    const delta = e.deltaY < 0 ? 5 : -5;
+                    zoomEl.value = Math.max(100, Math.min(1000, current + delta));
+                    updateCropSliderLabels();
+                    drawCropPreview();
+                }, { passive: false });
+            }
+
             function createImageWrapperElement(src, preRegisteredKey = null) {
                 const key = preRegisteredKey || registerImage(src);
                 const wrapper = document.createElement("div");
@@ -3352,6 +3786,7 @@
                 const img = document.createElement("img");
                 img.src = src;
                 img.className = "tier-item-img";
+                applyCropToImg(img, key);
 
                 trigger.addEventListener("mouseenter", () => {
                     _hoveredTrigger = trigger;
@@ -3372,6 +3807,13 @@
                     openItemModal(wrapper);
                 });
 
+                trigger.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hideZoomPortal();
+                    openItemModal(wrapper);
+                });
+
                 trigger.addEventListener("dragstart", (e) => {
                     hideZoomPortal();
                     SilverDraggedElement = trigger;
@@ -3380,7 +3822,7 @@
                         e.dataTransfer &&
                         typeof e.dataTransfer.setDragImage === "function"
                     ) {
-                        const ghostData = createDragGhostCanvas(img);
+                        const ghostData = createDragGhostCanvas(img, key);
                         if (ghostData) {
                             // Chromium requires the canvas to be in the DOM at the
                             // moment setDragImage is called; position it offscreen.
@@ -3408,6 +3850,7 @@
 
                         const placeholderImg = document.createElement("img");
                         placeholderImg.src = src;
+                        applyCropToImg(placeholderImg, key);
                         _dragPlaceholder.appendChild(placeholderImg);
 
                         updatePlaceholderStyle();
@@ -3471,6 +3914,7 @@
                         const ghostImg = document.createElement("img");
                         ghostImg.src = src;
                         ghostImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
+                        applyCropToImg(ghostImg, key);
                         _touchGhost.appendChild(ghostImg);
                         document.body.appendChild(_touchGhost);
 
@@ -3479,6 +3923,7 @@
                         _dragPlaceholder.className = "drag-placeholder";
                         const placeholderImg = document.createElement("img");
                         placeholderImg.src = src;
+                        applyCropToImg(placeholderImg, key);
                         _dragPlaceholder.appendChild(placeholderImg);
                         updatePlaceholderStyle();
                         wrapper.parentNode.insertBefore(_dragPlaceholder, wrapper);

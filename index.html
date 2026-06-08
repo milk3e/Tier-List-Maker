@@ -1765,23 +1765,17 @@
 
                 imageLoaderInput.addEventListener("click", () => {
                     _imageImportExpected = true;
-                    showLoading("Waiting for file selection...");
-                    const onFocus = () => {
-                        window.removeEventListener("focus", onFocus);
-                        if (_imageImportExpected) enterStandby();
-                    };
-                    window.addEventListener("focus", onFocus);
-                    imageLoaderInput._focusCleanup = () =>
-                        window.removeEventListener("focus", onFocus);
+                    // Go straight to standby (dismissable) — never block with a
+                    // non-dismissable spinner. The focus event that used to
+                    // trigger enterStandby() is unreliable on mobile browsers.
+                    enterStandby();
+                    document.getElementById("loading-text").textContent =
+                        "Waiting for file selection...";
                 });
 
                 document
                     .getElementById("image-loader")
                     .addEventListener("change", async (e) => {
-                        if (imageLoaderInput._focusCleanup) {
-                            imageLoaderInput._focusCleanup();
-                            imageLoaderInput._focusCleanup = null;
-                        }
                         _imageImportExpected = false;
                         exitStandby();
 

@@ -22,24 +22,20 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 3. Have fun!
 - If you are on mobile, to run a local .html file, you may need to use an app like Webspace from F-Droid to open it. Some mobile browsers may be capable of running local .html files but it is not common.
 
-**Useage Guide**
-- You can add a title to your tier list by clicking the "Tier List Maker" title to edit it.
-- Create tiers with the Add New Tier button, and edit them by clicking on their color/name. Move them with the arrows next to them.
-- Click the Browse button to import image files, or click Add Image URL to instead use the image url from an image online, or right click copy an image from a webpage then press Ctrl+V, or drag and drop a file onto the page (if your browser supports it).
-- Drag and drop images from the Image Bank into the tier you want to put it in, and organize them within the tier by moving them next to eachother.
-- If you want to add a description to an image that shows when hovering over it, click on it to open its menu. You can also view the image in a seperate tab or delete the image within that menu using the corresponding buttons.
-- To save your tier list, click Export JSON, then when you want to load it, click Import JSON. Otherwise, the tier list is lost if you refresh or close the tab.
-- If you're using a lot of clipboard images, or have imported large images, file size can get quite large, causing exports and imports to be slow. Using the Compress Images button is good for keeping it fast and efficient when images get bloated. Use PNG if you want to keep transparency, make the max dimensions lower, or switch to JPEG to greatly reduce file size. GIFs are not effected. With compression, you can make even a 5000 image tier list speedy.
+**Tips**
+- You can rename the page title by clicking on it, and rename image file names by clicking on them and typing over them.
+- When the image bank gets a large filesize, it can slow things down. Use the "Compress Images" button to keep it lean.
+- You can make multiple tier lists for the same images by creating new tier tabs.
 
-If you want to use existing tier list images, there's an easy way to do so using an extension I made, [Media Grabber](https://github.com/milk3e/Media-Grabber-Extension). Simply go to a tier list website (or any suitable website with images), click Media Grabber, change the shared folder path to the one that holds specifically tier list image items (ocassionally is split into 2 or more folder paths), then download it as a zip. Then you can just extract the zip holding the images, and dump those images into this tier list maker.
+If you want to use images from an existing tier list, there's an easy way to do so using an extension I made, [Media Grabber](https://github.com/milk3e/Media-Grabber-Extension). Simply go to a tier list website (or any suitable website with images), click Media Grabber, select the path that has specifically the tier list images (sometimes is split into multiple paths), then download it as a zip (keep the extension open while downloading, otherwise the download stops). Then just extract the zip holding the images, and dump those images into this tier list maker.
 
-If you don't want to use the extension and are on Firefox (or any Firefox fork), you can just press Ctrl+I to open page info. While on a page with the images you want, you can go to the Media tab, sort by Type so you can see just 'Image' labeled media next to eachother, select the images you want and download them, then just add them into the tier list maker. Images from tier list sites often all share the same file path, making it easy to Shift+Click just what you want and not any extra stuff like GUI/page elements. **Make sure that while images are downloading, you leave the Page Info menu open,** otherwise it'll stop downloading if there's still more to download.
+If you don't want to use the extension and are on Firefox (or any Firefox fork), you can press Ctrl+I to open page info. While on a page with the images you want, you can go to the Media tab, sort by Type so you can see just 'Image' labeled media next to eachother, select the images you want and download them, then just add them into the tier list maker. Images from tier list sites often all share the same file path, making it easy to Shift+Click just what you want and not any extra stuff like GUI/page elements. **Make sure that while images are downloading, you leave the Page Info menu open,** otherwise it'll stop downloading if there's still more to download.
 
 Depending on your operating system, browser, or file explorer, you may have a cap for how many images you can import into the tier list maker at once. A simple workaround is just to break up the images into groups (for example, groups of 300), then import them one group at a time.
 
 If you are on a privacy-focused browser, you may have Canvas Data disabled, which can break certain features. A quick way in Firefox to enable it for that tab is to click the icon left of the URL (either looks like switches or like a picture), and enable it there.
 
-Some lite browsers like the DuckDuckGo browser on mobile may have weird colors.
+Some lite browsers like the DuckDuckGo browser on mobile may have weird colors or other issues.
 
 
 *Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*

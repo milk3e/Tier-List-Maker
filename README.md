@@ -38,6 +38,6 @@ If you are on a privacy-focused browser, you may have Canvas Data disabled, whic
 Some lite browsers like the DuckDuckGo browser on mobile may have weird colors or other issues.
 
 
-*Coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*
+*This project was coded by [Google Gemini](https://gemini.google.com) and [Claude](https://claude.com), then edited by me.*
 
 *This project is dedicated to the public domain [(CC0)](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to copy, modify, distribute, or do whatever you want with it.*

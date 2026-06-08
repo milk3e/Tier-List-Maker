@@ -1,4 +1,4 @@
-# Tier List Maker (Version 2.6)
+# Tier List Maker (Version 3.0)
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
 <img width="500" height="244" alt="t" src="https://github.com/user-attachments/assets/05fb80a6-93a7-4a42-9be9-ba3e0996b593" />
@@ -7,7 +7,7 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 
 **Features**
 - Creatable, moveable, colorable, deletable tiers.
-- Import images by file, URL, clipboard, or drag and drop. Move and sort them within tiers, can crop into squares or keep aspect ratio, can compress them, rename them, add descriptions, delete them, etc.
+- Import images by file, URL, clipboard, or drag and drop. Move and sort them within tiers, can crop them or keep aspect ratio, can compress them, rename them, add descriptions, delete them, etc.
 - Gif support, animated in the tier list.
 - Save/Load by exporting and importing a .json file.
 - Create an image of the tier list with adjustable quality.

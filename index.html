@@ -1077,12 +1077,12 @@
         </div>
 
         <div id="item-modal" class="modal-overlay">
-            <div class="modal-content">
-                <h3 style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px;">
+            <div class="modal-content" style="gap: 8px;">
+                <h3 style="display:flex; align-items:center; justify-content:space-between; margin:0 0 2px;">
                     <span>Image Settings</span>
                     <div style="display:flex; gap:6px; align-items:center;">
-                        <button id="modal-item-adjust-crop-btn" title="Adjust square crop position and zoom" style="font-size:0.78em; padding:4px 10px; background:#3a5a3a; display:none;">Adjust Crop</button>
-                        <button id="modal-item-compress-btn" title="Re-encode this image to reduce file size" style="font-size:0.78em; padding:4px 10px; background:#5a4a1a;">Compress</button>
+                        <button id="modal-item-adjust-crop-btn" title="Adjust square crop position and zoom" style="font-size:0.78em; padding:4px 10px; background:#3a5a3a; display:none; white-space:nowrap;">Adjust Crop</button>
+                        <button id="modal-item-compress-btn" title="Re-encode this image to reduce file size" style="font-size:0.78em; padding:4px 10px; background:#5a4a1a; white-space:nowrap;">Compress</button>
                     </div>
                 </h3>
                 <img
@@ -1098,7 +1098,7 @@
                         color: #aaa;
                         text-align: center;
                         word-break: break-all;
-                        padding: 2px 0 4px;
+                        padding: 0;
                         display: none;
                     "
                 >
@@ -1129,17 +1129,18 @@
                         font-size: 0.75em;
                         color: #777;
                         text-align: center;
-                        padding: 0 0 4px;
+                        margin-top: -4px;
+                        padding: 0;
                         display: none;
                     "
                 ></div>
-                <label>
+                <label style="margin-top: 2px;">
                     <textarea
                         id="modal-item-desc"
                         placeholder="Type an item description here..."
                     ></textarea>
                 </label>
-                <div class="modal-actions">
+                <div class="modal-actions" style="margin-top: 2px;">
                     <button
                         id="modal-item-delete-btn"
                         class="btn-danger"

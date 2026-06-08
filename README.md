@@ -1,4 +1,4 @@
-# Tier List Maker (Version 2.4)
+# Tier List Maker (Version 2.5)
 [Click here to use the web version without downloading it.](https://milk3e.github.io/Tier-List-Maker/)
 
 <img width="500" height="249" alt="t" src="https://github.com/user-attachments/assets/147731ca-1837-4a73-b30a-e7be6050e89f" />

@@ -1502,9 +1502,11 @@
                     const scale = baseScale * zoom;
                     const drawW = imgW * scale;
                     const drawH = imgH * scale;
-                    // translate matching applyCropToImg
-                    const txPx = -(ox / 100) * (zoom - 1) * 35;
-                    const tyPx = -(oy / 100) * (zoom - 1) * 35;
+                    // translate matching applyCropToImg (per-axis overflow)
+                    const halfOverflowX = Math.max(0, (drawW - 70) / 2);
+                    const halfOverflowY = Math.max(0, (drawH - 70) / 2);
+                    const txPx = -(ox / 100) * halfOverflowX;
+                    const tyPx = -(oy / 100) * halfOverflowY;
                     const imgLeft = 35 - drawW / 2 + txPx;
                     const imgTop  = 35 - drawH / 2 + tyPx;
 
@@ -3549,36 +3551,52 @@
                 updateBankCount();
             }
 
-            // Apply saved crop (offsetX, offsetY, zoom) to an img element in square mode
-            // Uses transform: translate + scale so the wrapper's overflow:hidden clips correctly.
+            // Apply saved crop (offsetX, offsetY, zoom) to an img element in square mode.
+            // Uses absolute positioning to exactly mirror drawCropPreview's canvas math.
             function applyCropToImg(imgEl, key) {
                 if (!key) return;
                 const crop = state.cropData && state.cropData[key];
-                // Always reset sizing (never let these linger)
+                // Always reset to default state first
+                imgEl.style.position = "";
                 imgEl.style.width = "";
                 imgEl.style.height = "";
+                imgEl.style.left = "";
+                imgEl.style.top = "";
                 imgEl.style.objectFit = "";
                 imgEl.style.objectPosition = "";
                 imgEl.style.transform = "";
                 imgEl.style.transformOrigin = "";
+                imgEl.style.maxWidth = "";
+                imgEl.style.maxHeight = "";
                 if (!crop || state.settings.aspectRatio !== "square") return;
 
-                const ox = crop.x || 0;   // -100..100 → pan offset as % of overflow
+                const ox = crop.x || 0;
                 const oy = crop.y || 0;
-                const zoom = crop.zoom || 1; // 1..3
+                const zoom = crop.zoom || 1;
 
-                // The img fills the 70px container exactly with object-fit:cover.
-                // scale(zoom) expands it from center; the overflow:hidden wrapper clips.
-                // translate moves the scaled image: positive ox → shift right (show more left side).
-                // The max shift is (zoom-1)*70/2 px each direction, mapped from ±100.
-                const maxShiftPct = ((zoom - 1) / zoom) * 50; // in % of the scaled size
-                // In px terms for a 70px container: (zoom-1)*35 px max shift
-                const txPx = -(ox / 100) * (zoom - 1) * 35;
-                const tyPx = -(oy / 100) * (zoom - 1) * 35;
+                const C = 70; // container size px
+                const nw = imgEl.naturalWidth  || C;
+                const nh = imgEl.naturalHeight || C;
 
-                imgEl.style.objectFit = "cover";
-                imgEl.style.transformOrigin = "center center";
-                imgEl.style.transform = `translate(${txPx}px, ${tyPx}px) scale(${zoom})`;
+                // Identical math to drawCropPreview:
+                const baseScale = Math.max(C / nw, C / nh);
+                const drawW = nw * baseScale * zoom;
+                const drawH = nh * baseScale * zoom;
+                const halfOverflowX = Math.max(0, (drawW - C) / 2);
+                const halfOverflowY = Math.max(0, (drawH - C) / 2);
+                const txPx = -(ox / 100) * halfOverflowX;
+                const tyPx = -(oy / 100) * halfOverflowY;
+                const imgLeft = C / 2 - drawW / 2 + txPx;
+                const imgTop  = C / 2 - drawH / 2 + tyPx;
+
+                imgEl.style.position = "absolute";
+                imgEl.style.width    = drawW + "px";
+                imgEl.style.height   = drawH + "px";
+                imgEl.style.left     = imgLeft + "px";
+                imgEl.style.top      = imgTop  + "px";
+                imgEl.style.maxWidth  = "none";
+                imgEl.style.maxHeight = "none";
+                imgEl.style.objectFit = "fill";
             }
 
             // Refresh crop styling on all rendered instances of a key
@@ -3652,10 +3670,13 @@
                 const drawW = iw * scale;
                 const drawH = ih * scale;
 
-                // 3. translate: -(ox/100)*(zoom-1)*halfSize, same ratio as 35px for 70px cell
+                // 3. Per-axis half-overflow (how far the image extends past container edge)
+                //    This matches the corrected applyCropToImg formula.
                 const halfSize = size / 2;
-                const txPx = -(x / 100) * (zoom - 1) * halfSize;
-                const tyPx = -(y / 100) * (zoom - 1) * halfSize;
+                const halfOverflowX = Math.max(0, (drawW - size) / 2);
+                const halfOverflowY = Math.max(0, (drawH - size) / 2);
+                const txPx = -(x / 100) * halfOverflowX;
+                const tyPx = -(y / 100) * halfOverflowY;
 
                 // Center of drawn image + translation
                 const imgLeft = halfSize - drawW / 2 + txPx;
@@ -3733,8 +3754,10 @@
                     if (!_cropDragging) return;
                     const { zoom } = getCropValues();
                     const size = cropCanvas.width || 320;
-                    // Dragging right = pulling image right = ox decreases (shows more right side)
-                    // Scale sensitivity by zoom so drag distance in px maps to visible range
+                    // Scale sensitivity so 1px drag ≈ proportional pan shift
+                    // The slider range is ±100, and the canvas is `size` px wide.
+                    // At zoom=1 there's no overflow so sensitivity doesn't matter;
+                    // at higher zoom use drag distance relative to canvas size.
                     const sensitivity = 200 / Math.max(zoom, 1);
                     const dx = -((e.clientX - _cropDragStartX) / size) * sensitivity;
                     const dy = -((e.clientY - _cropDragStartY) / size) * sensitivity;
@@ -3746,6 +3769,33 @@
                     drawCropPreview();
                 });
                 document.addEventListener("mouseup", () => { _cropDragging = false; });
+
+                // Touch support for drag-to-pan on mobile
+                cropCanvas.addEventListener("touchstart", (e) => {
+                    if (e.touches.length !== 1) return;
+                    _cropDragging = true;
+                    _cropDragStartX = e.touches[0].clientX;
+                    _cropDragStartY = e.touches[0].clientY;
+                    _cropDragOrigX = parseInt(document.getElementById("crop-x").value, 10);
+                    _cropDragOrigY = parseInt(document.getElementById("crop-y").value, 10);
+                    e.preventDefault();
+                }, { passive: false });
+                cropCanvas.addEventListener("touchmove", (e) => {
+                    if (!_cropDragging || e.touches.length !== 1) return;
+                    e.preventDefault();
+                    const { zoom } = getCropValues();
+                    const size = cropCanvas.width || 320;
+                    const sensitivity = 200 / Math.max(zoom, 1);
+                    const dx = -((e.touches[0].clientX - _cropDragStartX) / size) * sensitivity;
+                    const dy = -((e.touches[0].clientY - _cropDragStartY) / size) * sensitivity;
+                    const newX = Math.max(-100, Math.min(100, _cropDragOrigX + dx));
+                    const newY = Math.max(-100, Math.min(100, _cropDragOrigY + dy));
+                    document.getElementById("crop-x").value = Math.round(newX);
+                    document.getElementById("crop-y").value = Math.round(newY);
+                    updateCropSliderLabels();
+                    drawCropPreview();
+                }, { passive: false });
+                cropCanvas.addEventListener("touchend", () => { _cropDragging = false; });
 
                 // Scroll to zoom on the crop canvas
                 cropCanvas.addEventListener("wheel", (e) => {
@@ -3848,10 +3898,16 @@
                         _dragPlaceholder = document.createElement("div");
                         _dragPlaceholder.className = "drag-placeholder";
 
-                        const placeholderImg = document.createElement("img");
-                        placeholderImg.src = src;
-                        applyCropToImg(placeholderImg, key);
-                        _dragPlaceholder.appendChild(placeholderImg);
+                        const ghostData = createDragGhostCanvas(img, key);
+                        if (ghostData) {
+                            ghostData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            _dragPlaceholder.appendChild(ghostData.canvas);
+                        } else {
+                            const placeholderImg = document.createElement("img");
+                            placeholderImg.src = src;
+                            placeholderImg.style.cssText = "width:70px;height:70px;object-fit:cover;display:block;";
+                            _dragPlaceholder.appendChild(placeholderImg);
+                        }
 
                         updatePlaceholderStyle();
 
@@ -3911,20 +3967,31 @@
                         // Create ghost element
                         _touchGhost = document.createElement("div");
                         _touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:99998; opacity:0.75; width:70px; height:70px; border-radius:4px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
-                        const ghostImg = document.createElement("img");
-                        ghostImg.src = src;
-                        ghostImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
-                        applyCropToImg(ghostImg, key);
-                        _touchGhost.appendChild(ghostImg);
+                        const tGhostData = createDragGhostCanvas(img, key);
+                        if (tGhostData) {
+                            tGhostData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            _touchGhost.appendChild(tGhostData.canvas);
+                        } else {
+                            const ghostImg = document.createElement("img");
+                            ghostImg.src = src;
+                            ghostImg.style.cssText = "width:70px;height:70px;object-fit:cover;display:block;";
+                            _touchGhost.appendChild(ghostImg);
+                        }
                         document.body.appendChild(_touchGhost);
 
                         // Create placeholder
                         _dragPlaceholder = document.createElement("div");
                         _dragPlaceholder.className = "drag-placeholder";
-                        const placeholderImg = document.createElement("img");
-                        placeholderImg.src = src;
-                        applyCropToImg(placeholderImg, key);
-                        _dragPlaceholder.appendChild(placeholderImg);
+                        const tPhData = createDragGhostCanvas(img, key);
+                        if (tPhData) {
+                            tPhData.canvas.style.cssText = "width:70px;height:70px;display:block;";
+                            _dragPlaceholder.appendChild(tPhData.canvas);
+                        } else {
+                            const placeholderImg = document.createElement("img");
+                            placeholderImg.src = src;
+                            placeholderImg.style.cssText = "width:70px;height:70px;object-fit:cover;display:block;";
+                            _dragPlaceholder.appendChild(placeholderImg);
+                        }
                         updatePlaceholderStyle();
                         wrapper.parentNode.insertBefore(_dragPlaceholder, wrapper);
                         wrapper.style.display = "none";

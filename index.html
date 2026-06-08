@@ -781,7 +781,7 @@
         <!-- Image Compression Modal -->
         <div id="compress-modal" class="modal-overlay">
             <div class="modal-content" style="width: 320px">
-                <h3>🗜 Compress Images</h3>
+                <h3 id="compress-modal-title">🗜 Compress Images</h3>
                 <p style="color: #aaa; font-size: 0.85em; margin: 0 0 12px">
                     Re-encodes images using canvas. GIFs are always skipped.
                     JPEG loses transparency; use PNG to preserve it (larger
@@ -1080,7 +1080,10 @@
             <div class="modal-content">
                 <h3 style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px;">
                     <span>Image Settings</span>
-                    <button id="modal-item-adjust-crop-btn" title="Adjust square crop position and zoom" style="font-size:0.78em; padding:4px 10px; background:#3a5a3a; display:none;">✂ Adjust Crop</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button id="modal-item-adjust-crop-btn" title="Adjust square crop position and zoom" style="font-size:0.78em; padding:4px 10px; background:#3a5a3a; display:none;">Adjust Crop</button>
+                        <button id="modal-item-compress-btn" title="Re-encode this image to reduce file size" style="font-size:0.78em; padding:4px 10px; background:#5a4a1a;">Compress</button>
+                    </div>
                 </h3>
                 <img
                     id="modal-item-preview"
@@ -2565,6 +2568,16 @@
                     });
 
                 document
+                    .getElementById("modal-item-compress-btn")
+                    .addEventListener("click", () => {
+                        if (!activeModalItemWrap) return;
+                        const key = activeModalItemWrap.dataset.imgKey;
+                        // Close item modal and open compress modal in single-image mode
+                        document.getElementById("item-modal").classList.remove("active");
+                        openCompressModal(key);
+                    });
+
+                document
                     .getElementById("modal-item-save-btn")
                     .addEventListener("click", () => {
                         if (activeModalItemWrap) {
@@ -2795,15 +2808,27 @@
                     });
 
                 // --- Compress Images ---
+                // _compressSingleKey: if set, compress only that one image key
+                let _compressSingleKey = null;
+
+                function openCompressModal(singleKey) {
+                    _compressSingleKey = singleKey || null;
+                    document.getElementById("compress-status").textContent = "";
+                    const scopeWrap = document.getElementById("compress-scope-wrap");
+                    const title = document.getElementById("compress-modal-title");
+                    if (_compressSingleKey) {
+                        scopeWrap.style.display = "none";
+                        title.textContent = "🗜 Compress Image";
+                    } else {
+                        scopeWrap.style.display = "";
+                        title.textContent = "🗜 Compress Images";
+                    }
+                    document.getElementById("compress-modal").classList.add("active");
+                }
+
                 document
                     .getElementById("compress-btn")
-                    .addEventListener("click", () => {
-                        document.getElementById("compress-status").textContent =
-                            "";
-                        document
-                            .getElementById("compress-modal")
-                            .classList.add("active");
-                    });
+                    .addEventListener("click", () => openCompressModal(null));
                 document
                     .getElementById("compress-format")
                     .addEventListener("change", function () {
@@ -2824,9 +2849,8 @@
                 document
                     .getElementById("compress-cancel-btn")
                     .addEventListener("click", () => {
-                        document
-                            .getElementById("compress-modal")
-                            .classList.remove("active");
+                        document.getElementById("compress-modal").classList.remove("active");
+                        _compressSingleKey = null;
                     });
                 document
                     .getElementById("compress-confirm-btn")
@@ -2844,47 +2868,39 @@
                             document.getElementById("compress-scope").value;
                         const statusEl =
                             document.getElementById("compress-status");
-                        const mimeType =
-                            format === "png" ? "image/png" : "image/jpeg";
 
-                        document.getElementById(
-                            "compress-confirm-btn",
-                        ).disabled = true;
+                        document.getElementById("compress-confirm-btn").disabled = true;
                         statusEl.textContent = "Collecting images…";
 
-                        syncStateFromDOM();
-                        const bankKeys = [...state.bank];
-                        const tierKeys = state.tiers.flatMap((t) => t.images);
-                        const keys =
-                            scope === "bank"
-                                ? bankKeys
-                                : [...bankKeys, ...tierKeys];
-                        const unique = [...new Set(keys)];
-
-                        const toProcess = unique.filter((k) => {
+                        // Build list of keys to process
+                        let toProcess;
+                        if (_compressSingleKey) {
+                            toProcess = [_compressSingleKey];
+                        } else {
+                            syncStateFromDOM();
+                            const bankKeys = [...state.bank];
+                            const tierKeys = state.tiers.flatMap((t) => t.images);
+                            const keys = scope === "bank" ? bankKeys : [...bankKeys, ...tierKeys];
+                            toProcess = [...new Set(keys)];
+                        }
+                        toProcess = toProcess.filter((k) => {
                             const src = imageRegistry[k];
                             if (!src || !src.startsWith("data:")) return false;
-                            // Skip GIFs always
                             if (src.startsWith("data:image/gif")) return false;
                             return true;
                         });
 
                         if (toProcess.length === 0) {
-                            statusEl.textContent =
-                                "No compressible images found (GIFs skipped).";
-                            document.getElementById(
-                                "compress-confirm-btn",
-                            ).disabled = false;
+                            statusEl.textContent = "No compressible images found (GIFs skipped).";
+                            document.getElementById("compress-confirm-btn").disabled = false;
                             return;
                         }
 
-                        let done = 0,
-                            saved = 0,
-                            skipped = 0;
+                        let done = 0, saved = 0, skipped = 0;
                         showLoading(`Compressing… (0/${toProcess.length})`);
-                        document
-                            .getElementById("compress-modal")
-                            .classList.remove("active");
+                        document.getElementById("compress-modal").classList.remove("active");
+                        const wasSingle = _compressSingleKey;
+                        _compressSingleKey = null;
 
                         for (const key of toProcess) {
                             const src = imageRegistry[key];
@@ -2900,56 +2916,32 @@
                                         w = Math.round(w * ratio);
                                         h = Math.round(h * ratio);
                                     }
-                                    const canvas =
-                                        document.createElement("canvas");
+                                    const canvas = document.createElement("canvas");
                                     canvas.width = Math.max(1, w);
                                     canvas.height = Math.max(1, h);
                                     const ctx = canvas.getContext("2d");
                                     if (format === "jpeg") {
-                                        // Fill white so transparent areas don't go black
                                         ctx.fillStyle = "#ffffff";
-                                        ctx.fillRect(
-                                            0,
-                                            0,
-                                            canvas.width,
-                                            canvas.height,
-                                        );
+                                        ctx.fillRect(0, 0, canvas.width, canvas.height);
                                     }
-                                    ctx.drawImage(
-                                        imgEl,
-                                        0,
-                                        0,
-                                        canvas.width,
-                                        canvas.height,
-                                    );
-                                    const out =
-                                        format === "png"
-                                            ? canvas.toDataURL("image/png")
-                                            : canvas.toDataURL(
-                                                  "image/jpeg",
-                                                  quality,
-                                              );
-                                    resolve(out);
+                                    ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+                                    resolve(format === "png"
+                                        ? canvas.toDataURL("image/png")
+                                        : canvas.toDataURL("image/jpeg", quality));
                                 };
                                 imgEl.onerror = () => resolve(null);
                                 imgEl.src = src;
                             });
 
-                            if (!compressed) {
-                                done++;
-                                continue;
-                            }
+                            if (!compressed) { done++; continue; }
 
                             const after = compressed.length;
                             if (after < before) {
                                 imageRegistry[key] = compressed;
-                                if (state.imageData)
-                                    state.imageData[key] = compressed;
-                                document
-                                    .querySelectorAll(
-                                        `.tier-item-wrap[data-img-key="${key}"] .tier-item-img`,
-                                    )
-                                    .forEach((el) => (el.src = compressed));
+                                if (state.imageData) state.imageData[key] = compressed;
+                                document.querySelectorAll(
+                                    `.tier-item-wrap[data-img-key="${key}"] .tier-item-img`
+                                ).forEach((el) => (el.src = compressed));
                                 saved += before - after;
                             } else {
                                 skipped++;
@@ -2957,28 +2949,17 @@
 
                             done++;
                             if (done % 5 === 0 || done === toProcess.length) {
-                                showLoading(
-                                    `Compressing… (${done}/${toProcess.length})`,
-                                );
-                                await new Promise((r) =>
-                                    requestAnimationFrame(r),
-                                );
+                                showLoading(`Compressing… (${done}/${toProcess.length})`);
+                                await new Promise((r) => requestAnimationFrame(r));
                             }
                         }
 
                         hideLoading();
-                        document.getElementById(
-                            "compress-confirm-btn",
-                        ).disabled = false;
+                        document.getElementById("compress-confirm-btn").disabled = false;
                         markUnsaved();
                         const savedKB = (saved / 1024).toFixed(0);
-                        const skippedNote =
-                            skipped > 0
-                                ? ` (${skipped} already smaller, kept original)`
-                                : "";
-                        showToast(
-                            `Compressed ${done - skipped} image(s) — saved ~${savedKB} KB${skippedNote}.`,
-                        );
+                        const skippedNote = skipped > 0 ? ` (${skipped} already smallest, kept original)` : "";
+                        showToast(`Compressed ${done - skipped} image(s) — saved ~${savedKB} KB${skippedNote}.`);
                     });
             }
 

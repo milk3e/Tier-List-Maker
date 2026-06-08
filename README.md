@@ -7,20 +7,20 @@ This is a standalone HTML file you can open with your web browser, it lets you c
 
 **Features**
 - Creatable, moveable, colorable, deletable tiers.
-- Import images by file, URL, clipboard, or drag and drop. Move and sort them within tiers, can crop into squares or keep aspect ratio, can delete them, and can compress them.
+- Import images by file, URL, clipboard, or drag and drop. Move and sort them within tiers, can crop into squares or keep aspect ratio, can compress them, rename them, add descriptions, delete them, etc.
 - Gif support, animated in the tier list.
 - Save/Load by exporting and importing a .json file that contains the entire tier list and its images.
-- Create an image out of tier list with adjustable quality.
-- Append descriptions to images to add any information you want.
+- Create an image out of the tier list with adjustable quality.
 - Adjustable layout and settings to change the workflow to your liking.
 - Shuffle button to make the order you tier things in unique.
-- Lightweight, bloat-free, fully offline and local.
+- Bloat-free, fully offline and local.
 - And more!
 
-**How to Download**
+**How to Download for Offline Use**
 1. Download 'index.html' by either clicking it above in the file list and then clicking the download button, or by clicking the green 'Code' button, downloading the zip, and extracting it.
 2. Double-click the html file to run it directly in your web browser.
 3. Have fun!
+- If you are on mobile, to run a local .html file, you may need to use an app like Webspace from F-Droid to open it. Some mobile browsers may be capable of running local .html files but it is not common.
 
 **Useage Guide**
 - You can add a title to your tier list by clicking the "Tier List Maker" title to edit it.

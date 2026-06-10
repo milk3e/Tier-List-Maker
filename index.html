@@ -3030,6 +3030,13 @@
                 }
 
                 const fileObj = blobRegistry[key];
+
+                // Hide Compress button for GIFs (canvas re-encoding strips animation)
+                const compressBtn = document.getElementById("modal-item-compress-btn");
+                const srcForType = imageRegistry[key] || img.src;
+                const isGif = srcForType.startsWith("data:image/gif");
+                compressBtn.style.display = isGif ? "none" : "";
+
                 const filenameWrap = document.getElementById("modal-item-filename-wrap");
                 const filenameInput = document.getElementById("modal-item-filename");
                 const filesizeEl = document.getElementById("modal-item-filesize");
